@@ -29,29 +29,55 @@ class Board:
     
     def get_number(self, row: int, col: int) -> int:
         """ Devolve o valor na respetiva posição do tabuleiro. """
-        # TODO
-        pass
-    
+        try:
+            return self.board[row][col]
+        except IndexError:
+            return None
+
     def adjacent_vertical_numbers(self, row: int, col: int) -> (int, int):
-        """ Devolve os valores imediatamente abaixo e acima, 
+        """ Devolve os valores imediatamente abaixo e acima,
         respectivamente. """
-        # TODO
-        pass
-    
+        results = []
+        for dir in [1, -1]:
+            try:
+                results.append(self.board[row + dir][col])
+            except IndexError:
+                results.append(None)
+        return tuple(results)
+
     def adjacent_horizontal_numbers(self, row: int, col: int) -> (int, int):
-        """ Devolve os valores imediatamente à esquerda e à direita, 
+        """ Devolve os valores imediatamente à esquerda e à direita,
         respectivamente. """
-        # TODO
-        pass
-    
-    @staticmethod    
+        results = []
+        for dir in [-1, 1]:
+            try:
+                results.append(self.board[row][col + dir])
+            except IndexError:
+                results.append(None)
+        return tuple(results)
+
+    @staticmethod
     def parse_instance(filename: str):
         """ Lê o ficheiro cujo caminho é passado como argumento e retorna
         uma instância da classe Board. """
-        # TODO
-        pass
+        file_board = []
+        try:
+            with open(filename) as f:
+                initial_numbers = set()
+                board_size = int(f.readline())
+                for line in f.readlines():
+                    split = line.split('\t')
+                    file_board.append([int(i) for i in split])
+            # TODO: Verificar construtor do Board
+            # return Board(file_board, board_size, initial_numbers)
+        except IOError:  # Couldn't open input file
+            print("Something went wrong while attempting to read file.")
+            sys.exit(-1)
 
     # TODO: outros metodos da classe
+
+    def to_string(self):
+        return '\n'.join('\t'.join(f'{i}' for i in x) for x in self.board) + '\n'
 
 
 class Numbrix(Problem):
@@ -90,9 +116,7 @@ class Numbrix(Problem):
 
 
 if __name__ == "__main__":
-    # TODO:
-    # Ler o ficheiro de input de sys.argv[1],
-    # Usar uma técnica de procura para resolver a instância,
-    # Retirar a solução a partir do nó resultante,
-    # Imprimir para o standard output no formato indicado.
-    pass
+    board = Board.parse_instance(sys.argv[1])
+    problem = Numbrix(board)
+    goal_node = greedy_search(problem)
+    print(goal_node.state.board.to_string(), sep="")
