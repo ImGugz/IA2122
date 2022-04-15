@@ -4,9 +4,10 @@ import numpy as np
 import math
 import re
 import os
+import copy
 
-MIN_DELETE_FRACTION = 1 / 2
-MAX_DELETE_FRACTION = 5 / 7
+MIN_DELETE_FRACTION = 5/7
+MAX_DELETE_FRACTION = 6/7
 
 def to_string(table):
     res = ""
@@ -29,6 +30,8 @@ with open (file, "r") as f:
 n = len(board)
 k = random.randint(math.ceil(n * n * MIN_DELETE_FRACTION), math.floor(n * n * MAX_DELETE_FRACTION))
 
+old_board = copy.deepcopy(board)
+
 # randomly delete board entries
 while k > 0:
     to_delete = random.randint(0, n * n - 1)
@@ -39,10 +42,16 @@ while k > 0:
 
 i = 1
 
-while os.path.exists(f"input_{n}_{i}.txt"):
+while os.path.exists(f"generated/input_{n}_{i}.txt") or os.path.exists(f"generated/output_{n}_{i}.txt") :
     i += 1
 
 with open(f"generated/input_{n}_{i}.txt", "w") as f:
     f.write(f"{n}\n")
     f.write(to_string(board))
     f.close()
+
+with open(f"generated/output_{n}_{i}.txt", "w") as f:
+    f.write(to_string(old_board))
+    f.close()
+
+print(f"Created new files generated/input_{n}_{i}.txt and generated/output_{n}_{i}.txt")
