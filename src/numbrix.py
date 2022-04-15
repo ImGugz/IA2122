@@ -9,6 +9,7 @@
 import sys
 import copy
 import time
+import os, psutil
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, recursive_best_first_search
 
 
@@ -54,6 +55,7 @@ class Board:
                                           (pos[0] < i or (pos[0] == i and pos[1] < j)) and
                                           abs(self.get_number(i, j) - self.get_number(pos[0], pos[1])) == 1]
                     if len(occupied_neighbors) != 0:
+
                         self.island_map[self.get_number(occupied_neighbors[0][0], occupied_neighbors[0][1])].add(self.board[(i, j)])
                         self.island_map[self.get_number(i, j)] = self.island_map[self.get_number(occupied_neighbors[0][0], occupied_neighbors[0][1])]
                         for neigh in occupied_neighbors[1:]:
@@ -61,10 +63,21 @@ class Board:
                                 .update(self.island_map[self.get_number(i, j)]
                                         .union(self.island_map[self.get_number(neigh[0], neigh[1])]))
                             self.islands.remove(self.island_map[self.get_number(neigh[0], neigh[1])])
+                            self.island_map[self.get_number(neigh[0], neigh[1])] = self.island_map[self.get_number(i, j)]
+                        #if self.board[(i, j)] == 62:
+                            #print("Yoo")
+                            #print(self.islands)
+                            #print(self.island_map)
+
                     else:
                         new_set = {self.board[(i, j)]}
                         self.islands.append(new_set)
                         self.island_map[self.get_number(i, j)] = new_set
+                        #if self.board[(i, j)] == 61:
+                        #    print("Yoo")
+                        #    print(self.islands)
+                        #    print(self.island_map)
+
 
 
 
@@ -143,7 +156,7 @@ class Board:
 
     def to_string(self):
         return '\n'.join('\t'.join(f'{self.get_number(i, j)}' for j in range(self.board_size))
-                         for i in range(self.board_size)) + '\n'
+                         for i in range(self.board_size))
 
     def dfs(self, origin, dest):
         #print(self.to_string())
@@ -299,9 +312,10 @@ class Numbrix(Problem):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
 
+        #print(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
         actions = []
         islands_len = len(state.board.islands)
-
+        #print("\n\n")
         #print("Initial board")
         #print(state.board.islands)
         #print(state.board.to_string())
@@ -316,6 +330,8 @@ class Numbrix(Problem):
         if not (state.board.is_space_reachable(lower_bound_pos, lower_bound - 1)
                 and state.board.is_space_reachable(upper_bound_pos, state.board.board_size ** 2 - upper_bound)):
             #print("Bounds not continuable")
+            #print("Actions")
+            #print(f"{[]}")
             return []
 
         if len(state.board.islands) > 1:
@@ -330,11 +346,15 @@ class Numbrix(Problem):
             # Check if the real distance between numbers is smaller than their manhattan distance
             if abs(maximum_pos[0] - minimum_pos[0]) + abs(maximum_pos[1] - minimum_pos[1]) > minimum - maximum:
                 #print("O que estas a fazer??")
+                #print("Actions")
+                #print(f"{[]}")
                 return []
 
             # Check if the minimum and maximum are mutually reachable
             if not state.board.dfs(maximum_pos, minimum_pos):
                 #print("Not reachable")
+                #print("Actions")
+                #print(f"{[]}")
                 return []
 
             if maximum + 1 in state.board.numbers_to_go:
@@ -346,8 +366,11 @@ class Numbrix(Problem):
                     state.board.set_number(pos[0], pos[1], maximum + 1)
                     #print(state.board.to_string())
 
-                    if state.board.check_dead_spaces(pos, maximum + 1):
+                    if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
+                            state.board.check_dead_spaces(pos, maximum + 1):
                         actions.append((pos[0], pos[1], maximum + 1))
+                   # else:
+                        #print("Nuh-uh")
 
                     state.board.set_number(pos[0], pos[1], 0)
 
@@ -406,6 +429,11 @@ class Numbrix(Problem):
         adj_neigh_island = new_board.island_map[new_board.get_number(adj_neigh[0], adj_neigh[1])]
         #print(f"His island is {adj_neigh_island}")
         adj_neigh_island.update(adj_neigh_island.union({value}))
+
+        ######
+        new_board.island_map[value] = adj_neigh_island
+        ######
+
         #print(f"After adding it becomes: {adj_neigh_island}")
 
         for pos in [adj for adj in new_board.get_adjacents(row, col) \
@@ -417,8 +445,8 @@ class Numbrix(Problem):
             #print(f"Analyzing {adj_island}")
             #print(f"Against {adj_neigh_island}")
             adj_neigh_island.update(adj_neigh_island.union(adj_island))
-
             new_board.islands.remove(adj_island)
+            adj_island = adj_neigh_island
 
         #print(f"Applying {action}")
         #print(new_board.islands)
@@ -435,12 +463,15 @@ class Numbrix(Problem):
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
+        #return len(node.state.board.islands)
         return 0
 
     # TODO: outros metodos da classe
 
 
 if __name__ == "__main__":
+
+
     board = Board.parse_instance(sys.argv[1])
     tic = time.perf_counter()
     problem = Numbrix(board)
@@ -448,3 +479,6 @@ if __name__ == "__main__":
     toc = time.perf_counter()
     print(f"Programa executado em {toc - tic:0.4f} segundos.")
     print(goal_node.state.board.to_string(), sep="")
+
+    process = psutil.Process(os.getpid())
+    print(f"Memória usada: {process.memory_info().rss // 1024} kB")  # in bytes
