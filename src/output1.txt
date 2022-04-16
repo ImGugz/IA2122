@@ -1,0 +1,5 @@
+Programa executado em 0.0008 segundos.
+1	2	3
+6	5	4
+7	8	9
+Memória usada: 23724 kB

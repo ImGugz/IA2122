@@ -12,7 +12,7 @@ import time
 import os, psutil
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, recursive_best_first_search
 
-DEBUG_FLAG = True
+DEBUG_FLAG = False
 i = 0
 
 def print_debug(string):
@@ -45,6 +45,7 @@ class Board:
     island_map = {} # Value -> Set #]
     assigned_positions = {}
     board_copy = {}
+    free_spaces = set()
 
     def __init__(self, board, board_size):
 
@@ -79,9 +80,8 @@ class Board:
                         new_set = {self.board[(i, j)]}
                         self.islands.append(new_set)
                         self.island_map[self.get_number(i, j)] = new_set
-
-
-
+                else:
+                    self.free_spaces.add((i, j))
 
         self.islands.sort(key = lambda x: min(x))
 
@@ -317,6 +317,68 @@ class Board:
 
         return True
 
+    def check_free_spaces(self, start):
+
+        list_free_spaces = self.free_spaces
+        visited = set()
+        lower_value = min(self.islands[0])
+        upper_value = max(self.islands[-1])
+        lower = self.assigned_positions[lower_value]
+        upper = self.assigned_positions[upper_value]
+        processed = set()
+
+        for space in list_free_spaces:
+            processed.update(processed.union(visited))
+            if space in processed:
+                continue
+            visited = set()
+            no_visited = 0
+            bigger_count = 0
+            bigger_list = []
+            stack = [space]
+            seen_upper = seen_lower = False
+            while stack:
+                #print(stack)
+                u = stack[-1]
+                print_debug(f"Currently in {u}")
+                if u in processed:
+                    bigger_count = 2
+                    break;
+                if u not in visited:
+                    visited.add(u)
+                    no_visited += 1
+                    for n in [adj for adj in self.get_adjacents(u[0], u[1])]:
+                        value_n = self.get_number(n[0], n[1])
+                        if n not in visited and value_n == 0:
+                            stack.append(n)
+                        if value_n >= start and not n in bigger_list and not \
+                            (len(bigger_list) == 1 and abs(self.get_number(n[0], n[1]) - self.get_number(bigger_list[0][0], bigger_list[0][1])) == 1):
+                            bigger_list.append(n)
+                            bigger_count += 1
+                            print_debug(f"Found {value_n} in {n}")
+                            print_debug(f"Got {bigger_count}")
+                        if bigger_count == 2:
+                            print_debug("lezz go")
+                            break
+                        if lower_value == value_n:
+                            seen_lower = True
+                        if upper_value == value_n:
+                            seen_upper = True
+                    if bigger_count == 2:
+                        print_debug("Got out!")
+                        break
+                else:
+                    stack = stack[:-1]
+
+            if not (bigger_count == 2 or (seen_lower and no_visited == lower_value - 1) or
+                    (seen_upper and no_visited == self.board_size ** 2 - upper_value) or
+                    (seen_upper and seen_lower  and (no_visited == lower_value - 1 + self.board_size ** 2 - upper_value))):
+                print_debug("Formaram-se ilhas!")
+                return False
+
+        return True
+
+
     def manhattan_distance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
@@ -370,7 +432,7 @@ class Numbrix(Problem):
 
         if len(state.board.islands) > 1:
 
-            (maximum, minimum) = state.board.closest_islands()
+            #(maximum, minimum) = state.board.closest_islands()
             #print(f"From {maximum} to {minimum}")
             maximum = max(state.board.islands[0])
             maximum_pos = state.board.assigned_positions[maximum]
@@ -400,14 +462,16 @@ class Numbrix(Problem):
                     # Simulate attribution of position
                     print_debug("Simulating")
                     state.board.set_number(pos[0], pos[1], maximum + 1)
+                    state.board.free_spaces.remove((pos[0], pos[1]))
                     print_debug(state.board.to_string())
 
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
-                            state.board.check_dead_spaces(pos, maximum + 1, minimum):
+                            state.board.check_free_spaces(maximum + 1):
                         actions.append((pos[0], pos[1], maximum + 1))
                     else:
                         print_debug("Nuh-uh")
 
+                    state.board.free_spaces.add((pos[0], pos[1]))
                     state.board.set_number(pos[0], pos[1], 0)
 
         if len(state.board.islands) == 1:
@@ -456,6 +520,7 @@ class Numbrix(Problem):
 
         new_board.set_number(row, col, value)
         new_board.numbers_to_go = state.board.numbers_to_go - {value}
+        new_board.free_spaces = state.board.free_spaces - {(row, col)}
         new_board.assigned_positions[value] = (row, col)
 
         adj_neigh =  [adj for adj in new_board.get_adjacents(row, col) \
