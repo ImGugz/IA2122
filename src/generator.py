@@ -24,7 +24,11 @@ with open (file, "r") as f:
     while f.readline() != "Solution:\n":
         pass
     for line in f.readlines():
-        split = re.split("\s{1,}", line)[:-1]
+        split = re.split("\s{1,}", line)
+        if split[-1] == '':
+            split = split[:-1]
+        if split[0] == '':
+            split = split[1:]
         board.append([int(n) for n in split])
 
 n = len(board)

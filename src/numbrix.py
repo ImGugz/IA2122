@@ -8,8 +8,8 @@
 
 import sys
 import copy
-import time
-import os, psutil
+#import time
+#import os, psutil
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, recursive_best_first_search
 
 
@@ -223,7 +223,7 @@ class Board:
             creates islands of dead spaces """
 
         lower_value = min(self.islands[0])
-        upper_value = min(self.islands[1])
+        upper_value = max(self.islands[-1])
         lower = self.assigned_positions[lower_value]
         upper = self.assigned_positions[upper_value]
         goal = self.board_size ** 2
@@ -253,6 +253,7 @@ class Board:
             visited = set()
             count = 0
             queue = [neigh]
+            seen_lower = seen_upper = False
             while len(queue) > 0:
                 u = queue[-1]
                 #print(f"Currently in {u}")
@@ -316,6 +317,8 @@ class Numbrix(Problem):
         actions = []
         islands_len = len(state.board.islands)
         #print("\n\n")
+        #print((state.board.get_number(5,3), state.board.get_number(4, 3), state.board.get_number(3, 3), state.board.get_number(2, 3)) == (0,4,5,6))
+        #print((state.board.get_number(4, 4), state.board.get_number(3, 4), state.board.get_number(2, 4)) == (9,8,7))
         #print("Initial board")
         #print(state.board.islands)
         #print(state.board.to_string())
@@ -369,7 +372,7 @@ class Numbrix(Problem):
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
                             state.board.check_dead_spaces(pos, maximum + 1):
                         actions.append((pos[0], pos[1], maximum + 1))
-                   # else:
+                    #else:
                         #print("Nuh-uh")
 
                     state.board.set_number(pos[0], pos[1], 0)
@@ -473,12 +476,12 @@ if __name__ == "__main__":
 
 
     board = Board.parse_instance(sys.argv[1])
-    tic = time.perf_counter()
+    #tic = time.perf_counter()
     problem = Numbrix(board)
     goal_node = depth_first_tree_search(problem)
-    toc = time.perf_counter()
-    print(f"Programa executado em {toc - tic:0.4f} segundos.")
+    #toc = time.perf_counter()
+    #print(f"Programa executado em {toc - tic:0.4f} segundos.")
     print(goal_node.state.board.to_string(), sep="")
 
-    process = psutil.Process(os.getpid())
-    print(f"Memória usada: {process.memory_info().rss // 1024} kB")  # in bytes
+    #process = psutil.Process(os.getpid())
+    #print(f"Memória usada: {process.memory_info().rss // 1024} kB")  # in bytes
