@@ -8,8 +8,8 @@
 
 import sys
 import copy
-import time
-import os, psutil
+#import time
+#import os, psutil
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, recursive_best_first_search
 
 DEBUG_FLAG = False
@@ -566,21 +566,27 @@ class Numbrix(Problem):
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
         #return len(node.state.board.islands)
-        return 0
+        board = node.state.board
+        total = 0
+        empty_positions = [(i, j) for i in range(board.board_size) for j in range(board.board_size) \
+                           if board.get_number(i, j) == 0]
+        for pos in empty_positions:
+            free_adj = [adj for adj in board.get_adjacents(pos[0], pos[1]) if board.get_number(adj[0], adj[1]) == 0]
+            total += (4 - len(free_adj)) ** 2
+        return total
 
     # TODO: outros metodos da classe
 
 
 if __name__ == "__main__":
 
-
     board = Board.parse_instance(sys.argv[1])
-    tic = time.perf_counter()
+    #tic = time.perf_counter()
     problem = Numbrix(board)
-    goal_node = depth_first_tree_search(problem)
-    toc = time.perf_counter()
-    print(f"Programa executado em {toc - tic:0.4f} segundos.")
-    #print(goal_node.state.board.to_string(), sep="")
+    goal_node = greedy_search(problem)
+    #toc = time.perf_counter()
+    #print(f"Programa executado em {toc - tic:0.4f} segundos.")
+    print(goal_node.state.board.to_string(), sep="")
 
-    process = psutil.Process(os.getpid())
+    #process = psutil.Process(os.getpid())
     #print(f"Memória usada: {process.memory_info().rss // 1024} kB")  # in bytes
