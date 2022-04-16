@@ -8,9 +8,17 @@
 
 import sys
 import copy
-#import time
-#import os, psutil
+import time
+import os, psutil
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, recursive_best_first_search
+
+DEBUG_FLAG = True
+i = 0
+
+def print_debug(string):
+    global DEBUG_FLAG
+    if DEBUG_FLAG == True:
+        print(string)
 
 
 class NumbrixState:
@@ -36,6 +44,7 @@ class Board:
     islands = []
     island_map = {} # Value -> Set #]
     assigned_positions = {}
+    board_copy = {}
 
     def __init__(self, board, board_size):
 
@@ -64,27 +73,19 @@ class Board:
                                         .union(self.island_map[self.get_number(neigh[0], neigh[1])]))
                             self.islands.remove(self.island_map[self.get_number(neigh[0], neigh[1])])
                             self.island_map[self.get_number(neigh[0], neigh[1])] = self.island_map[self.get_number(i, j)]
-                        #if self.board[(i, j)] == 62:
-                            #print("Yoo")
-                            #print(self.islands)
-                            #print(self.island_map)
+
 
                     else:
                         new_set = {self.board[(i, j)]}
                         self.islands.append(new_set)
                         self.island_map[self.get_number(i, j)] = new_set
-                        #if self.board[(i, j)] == 61:
-                        #    print("Yoo")
-                        #    print(self.islands)
-                        #    print(self.island_map)
 
 
 
 
         self.islands.sort(key = lambda x: min(x))
-        #print(self.to_string())
-        #print(self.islands)
 
+        self.board_copy = copy.deepcopy(self.board)
 
     def get_adjacents(self, row, col):
         return list(filter(lambda x: 0 <= x[0] < self.board_size and 0 <= x[1] < self.board_size
@@ -151,11 +152,15 @@ class Board:
         else:
             vectors = [(self.assigned_positions[max(self.islands[i])],
                         self.assigned_positions[min(self.islands[i + 1])]) for i in range(len(self.islands) - 1)]
-            return min([abs(vector[0][0] - vector[1][0]) + abs(vector[1][0] - vector[1][1])
+            return min([abs(vector[0][0] - vector[1][0]) + abs(vector[0][1] - vector[1][1])
                          for vector in vectors])
 
     def to_string(self):
         return '\n'.join('\t'.join(f'{self.get_number(i, j)}' for j in range(self.board_size))
+                         for i in range(self.board_size))
+
+    def copy_to_string(self):
+        return '\n'.join('\t'.join(f'{self.board_copy[(i, j)]}' for j in range(self.board_size))
                          for i in range(self.board_size))
 
     def dfs(self, origin, dest):
@@ -218,7 +223,7 @@ class Board:
                 queue = queue[:-1]
         return False
 
-    def check_dead_spaces(self, origin, start):
+    def check_dead_spaces(self, origin, start, goal):
         """ Check if puting start in origin position while trying to reach goal
             creates islands of dead spaces """
 
@@ -226,17 +231,15 @@ class Board:
         upper_value = max(self.islands[-1])
         lower = self.assigned_positions[lower_value]
         upper = self.assigned_positions[upper_value]
-        goal = self.board_size ** 2
+        #goal = self.board_size ** 2
         processed = set()
+        goal_pos = self.assigned_positions[goal]
 
         # See number of free spaces reachable from each free neighbor of origin
         free_neighbors = [adj for adj in self.get_adjacents(origin[0], origin[1]) if
                           self.get_number(adj[0], adj[1]) == 0]
-        seen_lower = False
-        seen_upper = False
         visited = set()
-        #print(f"I'm in {origin} going from {start} to {goal}. My neighbors are {free_neighbors} and my goal is "
-        #      f"{goal - start}")
+        print_debug(f"I'm in {origin}, in {start}. May try to reach {goal}")
 
         # Trivial case
         if len(free_neighbors) == 0:
@@ -246,30 +249,49 @@ class Board:
             return True
 
         for neigh in free_neighbors:
+            print_debug(f"Starting in {neigh}")
             processed.update(processed.union(visited))
             # if neigh has been visited, its DF tree has the same properties as previously explored trees
             if neigh in processed:
                 continue
             visited = set()
             count = 0
+            bigger = []
+            seen = 0
             queue = [neigh]
             seen_lower = seen_upper = False
+            #print_debug(f"Count = {count}")
             while len(queue) > 0:
                 u = queue[-1]
-                #print(f"Currently in {u}")
+                print_debug(f"Currently in {u}")
                 if u in processed:
-                    count = goal - start
+                    count = 2
                     break;
                 if u not in visited:
-                    count += 1
-                    #print(f"Count: {count}")
+                    seen += 1
+                    if seen == goal - start - 1 and goal_pos in bigger:
+                        print_debug("Well, actually, i have seen enough")
+                        count = 2
+                        break
+                    neighbors = [adj for adj in self.get_adjacents(u[0], u[1]) \
+                                 if adj not in visited]
+                    #print_debug(neighbors)
+                    for n in neighbors:
+                        print_debug(f"Checking neighbor {n}")
+                        if self.board[n] >= start and n not in bigger and \
+                                not (len(bigger) == 1 and (abs(self.board[n] - self.board[bigger[0]]) == 1)):
+                            bigger.append(n)
+                            print_debug(f"It has value {self.board[n]} while i have value {start}")
+                            count += 1
+                            if count == 2:
+                                break
                     visited.add(u)
-                if count == goal - start:
-                    #print("Lezz go!")
-                    break
+
                 neighbors = [adj for adj in self.get_adjacents(u[0], u[1]) \
                              if adj not in visited]
-
+                if count == 2:
+                    print_debug("Lezz go")
+                    break
                 # check if lowest/highest value in board has been reached
                 if lower in neighbors:
                     seen_lower = True
@@ -277,7 +299,7 @@ class Board:
                     seen_upper = True
 
                 neighbors = [n for n in neighbors
-                             if (self.get_number(n[0], n[1]) == 0 or self.get_number(n[0], n[1]) > start)]
+                             if self.get_number(n[0], n[1]) == 0]
 
                 if len(neighbors) > 0:
                     queue.append(neighbors[0])
@@ -286,13 +308,22 @@ class Board:
 
             # Note that there can be islands of seemingly dead spaces
             # that are actually "reserved" to be filled in the end
-            if not((count == goal - start) or
-                   (seen_upper and not seen_lower and count == self.board_size ** 2 - upper_value) or
-                   (seen_lower and not seen_upper and count == lower_value - 1) or
-                   (seen_lower and seen_upper and count == max(upper_value, lower_value))):
+            if not((count >= 2) or
+                   (seen_upper and not seen_lower and seen == self.board_size ** 2 - upper_value) or
+                   (seen_lower and not seen_upper and seen == lower_value - 1) or
+                   (seen_lower and seen_upper and count == self.board_size ** 2 - upper_value + lower_value - 1)):
+                #print_debug("Formam-se dead spaces!")
                 return False
 
         return True
+
+    def manhattan_distance(self, pos1, pos2):
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+    def closest_islands(self):
+        pairs = [(max(self.islands[i]), min(self.islands[i + 1])) for i in range(len(self.islands) - 1)]
+        closest = min(pairs, key= lambda x: (x[1] - x[0]))
+        return closest
 
 
     def __copy__(self):
@@ -313,15 +344,16 @@ class Numbrix(Problem):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
 
-        #print(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
+        global i
+        #print_debug(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
         actions = []
         islands_len = len(state.board.islands)
-        #print("\n\n")
-        #print((state.board.get_number(5,3), state.board.get_number(4, 3), state.board.get_number(3, 3), state.board.get_number(2, 3)) == (0,4,5,6))
-        #print((state.board.get_number(4, 4), state.board.get_number(3, 4), state.board.get_number(2, 4)) == (9,8,7))
-        #print("Initial board")
-        #print(state.board.islands)
-        #print(state.board.to_string())
+        print_debug("\n\n")
+        print_debug(f"Initial board {i}")
+        i += 1
+        print_debug(state.board.islands)
+        #print_debug(state.board.board == state.board.board_copy)
+        print_debug(state.board.to_string())
 
         upper_bound = max(state.board.islands[-1])
         upper_bound_pos = state.board.assigned_positions[upper_bound]
@@ -332,30 +364,31 @@ class Numbrix(Problem):
         # Check if we can continue the board from the lowest and highest occupied position
         if not (state.board.is_space_reachable(lower_bound_pos, lower_bound - 1)
                 and state.board.is_space_reachable(upper_bound_pos, state.board.board_size ** 2 - upper_bound)):
-            #print("Bounds not continuable")
-            #print("Actions")
-            #print(f"{[]}")
+            print_debug("Bounds not continuable")
+
             return []
 
         if len(state.board.islands) > 1:
 
+            (maximum, minimum) = state.board.closest_islands()
+            #print(f"From {maximum} to {minimum}")
             maximum = max(state.board.islands[0])
             maximum_pos = state.board.assigned_positions[maximum]
 
             minimum = min(state.board.islands[1])
             minimum_pos = state.board.assigned_positions[minimum]
-            #print(f"Maximum:{maximum} Minimum:{minimum}")
+            print_debug(f"Maximum:{maximum} Minimum:{minimum}")
 
             # Check if the real distance between numbers is smaller than their manhattan distance
             if abs(maximum_pos[0] - minimum_pos[0]) + abs(maximum_pos[1] - minimum_pos[1]) > minimum - maximum:
-                #print("O que estas a fazer??")
+                print_debug("O que estas a fazer??")
                 #print("Actions")
                 #print(f"{[]}")
                 return []
 
             # Check if the minimum and maximum are mutually reachable
             if not state.board.dfs(maximum_pos, minimum_pos):
-                #print("Not reachable")
+                print_debug("Not reachable")
                 #print("Actions")
                 #print(f"{[]}")
                 return []
@@ -365,15 +398,15 @@ class Numbrix(Problem):
                             if state.board.get_number(adj[0], adj[1]) == 0]:
 
                     # Simulate attribution of position
-                    #print("Simulating")
+                    print_debug("Simulating")
                     state.board.set_number(pos[0], pos[1], maximum + 1)
-                    #print(state.board.to_string())
+                    print_debug(state.board.to_string())
 
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
-                            state.board.check_dead_spaces(pos, maximum + 1):
+                            state.board.check_dead_spaces(pos, maximum + 1, minimum):
                         actions.append((pos[0], pos[1], maximum + 1))
-                    #else:
-                        #print("Nuh-uh")
+                    else:
+                        print_debug("Nuh-uh")
 
                     state.board.set_number(pos[0], pos[1], 0)
 
@@ -392,8 +425,8 @@ class Numbrix(Problem):
                 for pos in [adj for adj in state.board.get_adjacents(minimum_pos[0], minimum_pos[1]) \
                             if state.board.get_number(adj[0], adj[1]) == 0]:
                     actions.append((pos[0], pos[1], minimum - 1))
-        #print("Actions")
-        #print(f"{actions}")
+        print_debug("Actions")
+        print_debug(f"{actions}")
         return actions
 
 
@@ -410,6 +443,7 @@ class Numbrix(Problem):
         #print(state.board.to_string())
 
         new_board = copy.copy(state.board)
+        new_board.board_copy = state.board.board_copy
         new_board.board_size = state.board.board_size
         new_board.board = copy.copy(state.board.board)
         new_board.islands = [copy.copy(island) for island in state.board.islands]
@@ -476,12 +510,12 @@ if __name__ == "__main__":
 
 
     board = Board.parse_instance(sys.argv[1])
-    #tic = time.perf_counter()
+    tic = time.perf_counter()
     problem = Numbrix(board)
     goal_node = depth_first_tree_search(problem)
-    #toc = time.perf_counter()
-    #print(f"Programa executado em {toc - tic:0.4f} segundos.")
-    print(goal_node.state.board.to_string(), sep="")
+    toc = time.perf_counter()
+    print(f"Programa executado em {toc - tic:0.4f} segundos.")
+    #print(goal_node.state.board.to_string(), sep="")
 
-    #process = psutil.Process(os.getpid())
+    process = psutil.Process(os.getpid())
     #print(f"Memória usada: {process.memory_info().rss // 1024} kB")  # in bytes

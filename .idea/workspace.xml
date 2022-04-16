@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="3c04a3ee-f886-4295-84ed-0f2c6cdbd29a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/generator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/numbrix.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/numbrix.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -78,22 +77,12 @@
       <updated>1649852275853</updated>
       <workItem from="1649852280508" duration="41531000" />
       <workItem from="1649945358712" duration="31302000" />
-      <workItem from="1650026882943" duration="34355000" />
+      <workItem from="1650026882943" duration="34858000" />
+      <workItem from="1650113164080" duration="14322000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>8</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
