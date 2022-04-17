@@ -15,7 +15,7 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 
 i = 0
 initial_numbers = set()
-DEBUG_FLAG = True
+DEBUG_FLAG = False
 
 
 def print_debug(string):
@@ -49,7 +49,6 @@ class Board:
     global_min = ()
     global_max = ()
     extremes = False
-    assigned_positions = {}
     free_spaces = set()
 
     def __init__(self, board, board_size):
@@ -59,7 +58,6 @@ class Board:
         for i in range(self.board_size):
             for j in range(self.board_size):
                 self.board[(i, j)] = board[i][j]
-                self.assigned_positions[board[i][j]] = (i, j)
                 if board[i][j] == min_initial:
                     self.global_min = ((i, j), min_initial)
                 if board[i][j] == max_initial:
@@ -78,8 +76,8 @@ class Board:
                 if self.local_max[1] < num < self.local_min[1]:
                     self.local_min = ((i, j), num)
 
-        print_debug(f'Global Min: {self.global_min} ; Global Max: {self.global_max}')
-        print_debug(f'Local Max: {self.local_max} ; Local Min: {self.local_min}')
+        # print_debug(f'Global Min: {self.global_min} ; Global Max: {self.global_max}')
+        # print_debug(f'Local Max: {self.local_max} ; Local Min: {self.local_min}')
 
     def get_adjacents(self, row, col):
         return list(filter(lambda x: 0 <= x[0] < self.board_size and 0 <= x[1] < self.board_size
@@ -244,14 +242,15 @@ class Board:
             bigger_count = 0
             bigger_list = []
             stack = [space]
-            seen_upper = seen_lower = False
+            seen_upper = False
+            seen_lower = False
             while stack:
                 # print(stack)
                 u = stack[-1]
-                print_debug(f"Currently in {u}")
+                # print_debug(f"Currently in {u}")
                 if u in processed:
                     bigger_count = 2
-                    break;
+                    break
                 if u not in visited:
                     visited.add(u)
                     no_visited += 1
@@ -265,17 +264,17 @@ class Board:
                                                                                   bigger_list[0][1])) == 1):
                             bigger_list.append(n)
                             bigger_count += 1
-                            print_debug(f"Found {value_n} in {n}")
-                            print_debug(f"Got {bigger_count}")
+                            # print_debug(f"Found {value_n} in {n}")
+                            # print_debug(f"Got {bigger_count}")
                         if bigger_count == 2:
-                            print_debug("lezz go")
+                            # print_debug("lezz go")
                             break
                         if lower_value == value_n:
                             seen_lower = True
                         if upper_value == value_n:
                             seen_upper = True
                     if bigger_count == 2:
-                        print_debug("Got out!")
+                        # print_debug("Got out!")
                         break
                 else:
                     stack = stack[:-1]
@@ -284,7 +283,7 @@ class Board:
                     (seen_upper and no_visited == self.board_size ** 2 - upper_value) or
                     (seen_upper and seen_lower and (
                             no_visited == lower_value - 1 + self.board_size ** 2 - upper_value))):
-                print_debug("Formaram-se ilhas!")
+                # print_debug("Formaram-se ilhas!")
                 return False
 
         return True
@@ -313,21 +312,21 @@ class Numbrix(Problem):
         global i
         # global initial_board
         # if tracemalloc.get_traced_memory()[1] // 1024 > 32768:
-        # print_debug("Checking our own generated puzzles that exceed memory...")
-        # print_debug(f'\n{initial_board.to_string()}')
+        # # print_debug("Checking our own generated puzzles that exceed memory...")
+        # # print_debug(f'\n{initial_board.to_string()}')
         # raise AttributeError(f'\n{initial_board.to_string()}')
-        # # print_debug(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
+        # # # print_debug(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
         actions = []
         # islands_len = len(state.board.islands)
-        # print_debug("\n\n")
-        # print_debug(f"Initial board {i}")
+        # # print_debug("\n\n")
+        # # print_debug(f"Initial board {i}")
         i += 1
-        # print_debug(state.board.islands)
-        # print_debug(state.board.to_string())
+        # # print_debug(state.board.islands)
+        # # print_debug(state.board.to_string())
 
-        print('Going on actions with:')
-        print(f'Global Min: {state.board.global_min} ; Global Max: {state.board.global_max}')
-        print(f'Local Min: {state.board.local_min} ; Local Max: {state.board.local_max}')
+        # print_debug('Going on actions with:')
+        # print_debug(f'Global Min: {state.board.global_min} ; Global Max: {state.board.global_max}')
+        # print_debug(f'Local Min: {state.board.local_min} ; Local Max: {state.board.local_max}')
 
         upper_bound = state.board.global_max[1]
         upper_bound_pos = state.board.global_max[0]
@@ -338,7 +337,7 @@ class Numbrix(Problem):
         # Check if we can continue the board from the lowest and highest occupied position
         if not (state.board.is_space_reachable(lower_bound_pos, lower_bound - 1)
                 and state.board.is_space_reachable(upper_bound_pos, state.board.board_size ** 2 - upper_bound)):
-            print_debug("Bounds not continuable")
+            # print_debug("Bounds not continuable")
             return []
 
         if not state.board.extremes:
@@ -348,18 +347,18 @@ class Numbrix(Problem):
 
             minimum = state.board.local_min[1]
             minimum_pos = state.board.local_min[0]
-            # print_debug(f"Maximum:{maximum} Minimum:{minimum}")
+            # # print_debug(f"Maximum:{maximum} Minimum:{minimum}")
 
             # Check if the real distance between numbers is smaller than their manhattan distance
             if abs(maximum_pos[0] - minimum_pos[0]) + abs(maximum_pos[1] - minimum_pos[1]) > minimum - maximum:
-                print_debug("O que estas a fazer??")
+                # print_debug("O que estas a fazer??")
                 # print("Actions")
                 # print(f"{[]}")
                 return []
 
             # Check if the minimum and maximum are mutually reachable
             if not state.board.dfs(maximum_pos, minimum_pos):
-                print_debug("Not reachable")
+                # print_debug("Not reachable")
                 # print("Actions")
                 # print(f"{[]}")
                 return []
@@ -369,19 +368,19 @@ class Numbrix(Problem):
                             if state.board.get_number(adj[0], adj[1]) == 0]:
 
                     # Simulate attribution of position
-                    print_debug("Simulating")
+                    # print_debug("Simulating")
                     state.board.set_number(pos[0], pos[1], maximum + 1)
                     state.board.free_spaces.remove((pos[0], pos[1]))
-                    print_debug(state.board.to_string())
+                    # print_debug(state.board.to_string())
 
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) > minimum - (maximum + 1):
-                        print_debug("2 O que estas a fazer??")
+                        # print_debug("2 O que estas a fazer??")
                         state.board.free_spaces.add((pos[0], pos[1]))
                         state.board.set_number(pos[0], pos[1], 0)
                         continue
 
                     if not state.board.dfs(pos, minimum_pos):
-                        print_debug("2 Not reachable")
+                        # print_debug("2 Not reachable")
                         state.board.free_spaces.add((pos[0], pos[1]))
                         state.board.set_number(pos[0], pos[1], 0)
                         continue
@@ -389,14 +388,14 @@ class Numbrix(Problem):
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
                             state.board.check_free_spaces(maximum + 1):
                         actions.append((pos[0], pos[1], maximum + 1))
-                    else:
-                        print_debug("Nuh-uh")
+                    # else:
+                        # print_debug("Nuh-uh")
 
                     state.board.free_spaces.add((pos[0], pos[1]))
                     state.board.set_number(pos[0], pos[1], 0)
 
         if state.board.extremes:
-            print_debug('Aqui caralho')
+            # print_debug('Aqui caralho')
             maximum = state.board.global_max[1]
             maximum_pos = state.board.global_max[0]
             if maximum != state.board.board_size ** 2:
@@ -410,8 +409,8 @@ class Numbrix(Problem):
                 for pos in [adj for adj in state.board.get_adjacents(minimum_pos[0], minimum_pos[1]) \
                             if state.board.get_number(adj[0], adj[1]) == 0]:
                     actions.append((pos[0], pos[1], minimum - 1))
-        print_debug("Actions")
-        print_debug(f"{actions}")
+        # print_debug("Actions")
+        # print_debug(f"{actions}")
         return actions
 
     def result(self, state: NumbrixState, action):
@@ -432,45 +431,50 @@ class Numbrix(Problem):
         new_board.set_number(row, col, value)
         new_board.numbers_to_go = state.board.numbers_to_go - {value}
         new_board.free_spaces = state.board.free_spaces - {(row, col)}
-        new_board.assigned_positions = copy.copy(state.board.assigned_positions)
-        new_board.assigned_positions[value] = (row, col)
 
+        # Update global minimum
         if value < state.board.global_min[1]:
             new_board.global_min = ((row, col), value)
         else:
             new_board.global_min = state.board.global_min
 
+        # Update global maximum
         if value > state.board.global_max[1]:
             new_board.global_max = ((row, col), value)
         else:
             new_board.global_max = state.board.global_max
 
+        # Update locals before checking island convergency
         new_board.local_max = ((row, col), value)
         new_board.local_min = state.board.local_min
-        if value + 1 == state.board.local_min[1]:
+        if value + 1 == state.board.local_min[1]:  # Island converged
+            # We get the max value from an island DFS
             new_board.local_max = new_board.island_dfs(((row, col), value))
-            new_board.local_min = ((0, 0), state.board.board_size ** 2 + 1)
-            for i in range(state.board.board_size):
-                for j in range(state.board.board_size):
-                    num = new_board.get_number(i, j)
-                    if new_board.local_max[1] < num < new_board.local_min[1]:
-                        new_board.local_min = ((i, j), num)
+            # If we've reached the global max then we only have one island
+            if new_board.local_max == new_board.global_max:
+                new_board.local_min = new_board.global_min
+            else:
+                new_board.local_min = ((0, 0), state.board.board_size ** 2 + 1)
+                for i in range(state.board.board_size):
+                    for j in range(state.board.board_size):
+                        num = new_board.get_number(i, j)
+                        if new_board.local_max[1] < num < new_board.local_min[1]:
+                            new_board.local_min = ((i, j), num)
 
         if new_board.global_min == new_board.local_min or new_board.global_max == new_board.local_max:
             new_board.extremes = True
 
-        print_debug('-----------------')
-        print_debug('new_board:')
-        print_debug(f'- board_size = {new_board.board_size}')
-        print_debug(f'- board:\n{new_board.to_string()}')
-        print_debug(f'- numbers_to_go = {new_board.numbers_to_go}')
-        print_debug(f'- free_spaces = {new_board.free_spaces}')
-        print_debug(f'- assigned_positions = {new_board.assigned_positions}')
-        print_debug(f'- global_min = {new_board.global_min}')
-        print_debug(f'- global_max = {new_board.global_max}')
-        print_debug(f'- local_min = {new_board.local_min}')
-        print_debug(f'- local_max = {new_board.local_max}')
-        print_debug('-----------------')
+        # print_debug('-----------------')
+        # print_debug('new_board:')
+        # print_debug(f'- board_size = {new_board.board_size}')
+        # print_debug(f'- board:\n{new_board.to_string()}')
+        # print_debug(f'- numbers_to_go = {new_board.numbers_to_go}')
+        # print_debug(f'- free_spaces = {new_board.free_spaces}')
+        # print_debug(f'- global_min = {new_board.global_min}')
+        # print_debug(f'- global_max = {new_board.global_max}')
+        # print_debug(f'- local_min = {new_board.local_min}')
+        # print_debug(f'- local_max = {new_board.local_max}')
+        # print_debug('-----------------')
 
         # print(f"Applying {action}")
         # print(new_board.islands)
@@ -502,12 +506,6 @@ class Numbrix(Problem):
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
-    tic = time.perf_counter()
-    tracemalloc.start()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
-    print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
-    toc = time.perf_counter()
-    print(f"Programa executado em {toc - tic:0.4f} segundos.")
-    print('----------------------------')
     print(goal_node.state.board.to_string(), sep="")
