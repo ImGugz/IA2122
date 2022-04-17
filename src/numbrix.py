@@ -14,7 +14,7 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
     recursive_best_first_search
 
 i = 0
-initial_numbers = set()
+initial_numbers = []
 DEBUG_FLAG = False
 
 
@@ -43,13 +43,13 @@ class Board:
 
     board = {}
     board_size = 0
-    numbers_to_go = {}
+    numbers_to_go = []
     local_min = ()
     local_max = ()
     global_min = ()
     global_max = ()
     extremes = False
-    free_spaces = set()
+    free_spaces = []
 
     def __init__(self, board, board_size):
         self.board_size = board_size
@@ -63,9 +63,9 @@ class Board:
                 if board[i][j] == max_initial:
                     self.global_max = ((i, j), max_initial)
                 if self.board[(i, j)] == 0:
-                    self.free_spaces.add((i, j))
+                    self.free_spaces.append((i, j))
 
-        self.numbers_to_go = set(i for i in range(1, self.board_size * self.board_size + 1)) - initial_numbers
+        self.numbers_to_go = list(set(i for i in range(1, self.board_size * self.board_size + 1)) - set(initial_numbers))
 
         self.local_max = self.island_dfs(self.global_min)
         self.local_min = ((0, 0), self.board_size ** 2 + 1)
@@ -129,7 +129,7 @@ class Board:
                 board_size = int(f.readline())
                 for line in f.readlines():
                     split = line.split('\t')
-                    [initial_numbers.add(int(val)) for val in split if int(val) != 0]
+                    initial_numbers += [int(val) for val in split if int(val) != 0]
                     file_board.append([int(val) for val in split])
             # TODO: Verificar construtor do Board
             return Board(file_board, board_size)
@@ -375,13 +375,13 @@ class Numbrix(Problem):
 
                     if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) > minimum - (maximum + 1):
                         # print_debug("2 O que estas a fazer??")
-                        state.board.free_spaces.add((pos[0], pos[1]))
+                        state.board.free_spaces.append((pos[0], pos[1]))
                         state.board.set_number(pos[0], pos[1], 0)
                         continue
 
                     if not state.board.dfs(pos, minimum_pos):
                         # print_debug("2 Not reachable")
-                        state.board.free_spaces.add((pos[0], pos[1]))
+                        state.board.free_spaces.append((pos[0], pos[1]))
                         state.board.set_number(pos[0], pos[1], 0)
                         continue
 
@@ -391,7 +391,7 @@ class Numbrix(Problem):
                     # else:
                         # print_debug("Nuh-uh")
 
-                    state.board.free_spaces.add((pos[0], pos[1]))
+                    state.board.free_spaces.append((pos[0], pos[1]))
                     state.board.set_number(pos[0], pos[1], 0)
 
         if state.board.extremes:
@@ -429,8 +429,8 @@ class Numbrix(Problem):
         new_board.board_size = state.board.board_size
         new_board.board = copy.copy(state.board.board)
         new_board.set_number(row, col, value)
-        new_board.numbers_to_go = state.board.numbers_to_go - {value}
-        new_board.free_spaces = state.board.free_spaces - {(row, col)}
+        new_board.numbers_to_go = [x for x in state.board.numbers_to_go if x != value]
+        new_board.free_spaces = [x for x in state.board.free_spaces if x != (row, col)]
 
         # Update global minimum
         if value < state.board.global_min[1]:
@@ -498,7 +498,7 @@ class Numbrix(Problem):
                            if board.get_number(i, j) == 0]
         for pos in empty_positions:
             free_adj = [adj for adj in board.get_adjacents(pos[0], pos[1]) if board.get_number(adj[0], adj[1]) == 0]
-            total += (4 - len(free_adj)) ** 2
+            total += (4 - len(free_adj)) ** 1.4
         return total
 
     # TODO: outros metodos da classe
@@ -506,6 +506,12 @@ class Numbrix(Problem):
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
+    # tic = time.perf_counter()
+    # tracemalloc.start()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
+    # toc = time.perf_counter()
+    # print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
+    # print(f"Programa executado em {toc - tic:0.4f} segundos.")
+    # print('----------------------------')
     print(goal_node.state.board.to_string(), sep="")
