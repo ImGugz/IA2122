@@ -2,29 +2,33 @@
 # Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
 # Além das funções e classes já definidas, podem acrescentar outras que considerem pertinentes.
 
-# Grupo 00:
-# 00000 Nome1
-# 00000 Nome2
+# Grupo 20:
+# 95565 Duarte Almeida
+# 95587 Gustavo Aguiar
 
 import sys
 import copy
-import time
-import tracemalloc
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, \
     recursive_best_first_search
 
-i = 0
-initial_numbers = []
-DEBUG_FLAG = False
+
+def get_minmax_pos(minmax):
+    """ Dado um tuplo ((x, y), valor) retorna a posição (x, y). """
+    return minmax[0]
 
 
-def print_debug(string):
-    global DEBUG_FLAG
-    if DEBUG_FLAG:
-        print(string)
+def get_minmax_value(minmax):
+    """ Dado um tuplo ((x, y), valor) retorna o valor. """
+    return minmax[1]
+
+
+def manhattan_distance(pos1, pos2):
+    """ Devolve a distância Manhattan de dois vetores. """
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
 class NumbrixState:
+    """Representação interna de um estado de um tabuleiro de Numbrix. """
     state_id = 0
 
     def __init__(self, board):
@@ -35,23 +39,21 @@ class NumbrixState:
     def __lt__(self, other):
         return self.id < other.id
 
-    # TODO: outros metodos da classe
-
 
 class Board:
     """ Representação interna de um tabuleiro de Numbrix. """
 
-    board = {}
-    board_size = 0
-    numbers_to_go = []
-    local_min = ()
-    local_max = ()
-    global_min = ()
-    global_max = ()
-    extremes = False
-    free_spaces = []
+    board = {}  # board[(i, j)] = Value
+    board_size = 0  # board_size = N^2
+    numbers_to_go = []  # numbers_to_go = S in [1, 2, ..., N^2] s.t if i in S, the board doesn't contain number i
+    local_min = ()  # local_min = ((lm_x, lm_y), lm_val) belonging to the minimum value of the second island (if appl.)
+    local_max = ()  # local_max = ((lM_x, lM_y), lm_VAL) belonging to the maximum value of the first island (if appl.)
+    global_min = ()  # global_min = ((m_x, m_y), m_val) containing the current minimum position and value on the board
+    global_max = ()  # global_max = ((M_x, M_y), M_val) containing the current maximum position and value on the board
+    extremes = False  # extremes = True, means that we only have 1 island remaining and will try to fill the value edges
+    free_spaces = []  # free_spaces = [(i,j) s.t that board[(i, j)] = 0]
 
-    def __init__(self, board, board_size):
+    def __init__(self, board, board_size, initial_numbers):
         self.board_size = board_size
         min_initial = min(initial_numbers)
         max_initial = max(initial_numbers)
@@ -65,9 +67,12 @@ class Board:
                 if self.board[(i, j)] == 0:
                     self.free_spaces.append((i, j))
 
-        self.numbers_to_go = list(set(i for i in range(1, self.board_size * self.board_size + 1)) - set(initial_numbers))
+        self.numbers_to_go = list(
+            set(i for i in range(1, self.board_size * self.board_size + 1)) - set(initial_numbers))
 
+        # Through a DFS from the global minimum try to expand an island from it and store its max position and value
         self.local_max = self.island_dfs(self.global_min)
+        # Arbitrary number to be compared to find to minimum of a second island
         self.local_min = ((0, 0), self.board_size ** 2 + 1)
 
         for i in range(self.board_size):
@@ -76,10 +81,8 @@ class Board:
                 if self.local_max[1] < num < self.local_min[1]:
                     self.local_min = ((i, j), num)
 
-        # print_debug(f'Global Min: {self.global_min} ; Global Max: {self.global_max}')
-        # print_debug(f'Local Max: {self.local_max} ; Local Min: {self.local_min}')
-
     def get_adjacents(self, row, col):
+        """ Devolve uma lista de posições adjacentes que respeitem os limites do tabuleiro. """
         return list(filter(lambda x: 0 <= x[0] < self.board_size and 0 <= x[1] < self.board_size
                            , [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]))
 
@@ -91,38 +94,36 @@ class Board:
             return None
 
     def set_number(self, row: int, col: int, value):
+        """ Define um dado valor numa dada posição do tabuleiro. """
         try:
             self.board[row, col] = value
         except KeyError:
             pass
 
     def adjacent_vertical_numbers(self, row: int, col: int) -> (int, int):
-        """ Devolve os valores imediatamente abaixo e acima,
-        respectivamente. """
+        """ Devolve os valores imediatamente abaixo e acima, respectivamente. """
         results = []
-        for dir in [1, -1]:
+        for direction in [1, -1]:
             try:
-                results.append(self.board[row + dir][col])
+                results.append(self.board[row + direction][col])
             except IndexError:
                 results.append(None)
         return tuple(results)
 
     def adjacent_horizontal_numbers(self, row: int, col: int) -> (int, int):
-        """ Devolve os valores imediatamente à esquerda e à direita,
-        respectivamente. """
+        """ Devolve os valores imediatamente à esquerda e à direita, respectivamente. """
         results = []
-        for dir in [-1, 1]:
+        for direction in [-1, 1]:
             try:
-                results.append(self.board[row][col + dir])
+                results.append(self.board[row][col + direction])
             except IndexError:
                 results.append(None)
         return tuple(results)
 
     @staticmethod
     def parse_instance(filename: str):
-        """ Lê o ficheiro cujo caminho é passado como argumento e retorna
-        uma instância da classe Board. """
-        global initial_numbers
+        """ Lê o ficheiro cujo caminho é passado como argumento e retorna uma instância da classe Board. """
+        initial_numbers = []
         file_board = []
         try:
             with open(filename) as f:
@@ -132,23 +133,26 @@ class Board:
                     initial_numbers += [int(val) for val in split if int(val) != 0]
                     file_board.append([int(val) for val in split])
             # TODO: Verificar construtor do Board
-            return Board(file_board, board_size)
+            return Board(file_board, board_size, initial_numbers)
         except IOError:  # Couldn't open input file
             print("Something went wrong while attempting to read file.")
             sys.exit(-1)
 
-    # TODO: outros metodos da classe
-
     def island_dfs(self, origin):
-        max_local = (origin[0], origin[1])
-        queue = [origin[0]]
+        """ Faz uma procura em profundidade primeiro a partir dum valor, e devolve um tuplo com uma posição e valor
+        t.q o valor dessa mesma posição é o maior dessa ilha. """
+        pos = get_minmax_pos(origin)
+        val = get_minmax_value(origin)
+        max_local = (pos, val)
+        queue = [pos]
         visited = set()
         while len(queue) > 0:
             u = queue[-1]
             visited.add(u)
             num = self.get_number(u[0], u[1])
-            if num > max_local[1] and num != origin[1]:
+            if num > max_local[1] and num != val:
                 max_local = (u, num)
+            # Get all assigned and unvisited neighbors s.t they're value neighbors (abs(diff(values)) = 1
             neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
                          if self.get_number(adj[0], adj[1]) != 0
                          and abs(self.get_number(adj[0], adj[1]) - num) == 1
@@ -160,22 +164,21 @@ class Board:
         return max_local
 
     def to_string(self):
+        """ Representa um tabuleiro de acordo com o modelo definido no enunciado. """
         return '\n'.join('\t'.join(f'{self.get_number(i, j)}' for j in range(self.board_size))
                          for i in range(self.board_size))
 
     def dfs(self, origin, dest):
-        # print(self.to_string())
-        # print(f"From {origin} to {dest}")
+        """ Devolve True se ao aplicar uma procura em profundidade primeiro dest é atingível a partir de origin. """
         queue = [origin]
         visited = set()
         while len(queue) > 0:
             u = queue[-1]
             visited.add(u)
-            # print(f"Analyzing {u}")
             if u == dest:
                 return True
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1]) \
-                         if (self.get_number(adj[0], adj[1]) == 0 or adj == dest) \
+            neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
+                         if (self.get_number(adj[0], adj[1]) == 0 or adj == dest)
                          and adj not in visited]
             if len(neighbors) > 0:
                 queue.append(neighbors[0])
@@ -183,27 +186,8 @@ class Board:
                 queue = queue[:-1]
         return False
 
-    def bfs(self, origin, dest):
-        # print(self.to_string())
-        # print(f"From {origin} to {dest}")
-        queue = [origin]
-        visited = set()
-        while len(queue) > 0:
-            u = queue[0]
-            queue = queue[1:]
-            # print(f"Analyzing {u}")
-            visited.add(u)
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1]) \
-                         if (self.get_number(adj[0], adj[1]) == 0 or adj == dest) \
-                         and adj not in visited and adj not in queue]
-            if dest in neighbors:
-                return True
-            queue.extend(neighbors)
-        return False
-
     def is_space_reachable(self, origin, length):
-        # print(self.to_string())
-        # print(f"From {origin}, length {length}")
+        """ Devolve True se a partir de origin temos um caminho de pelo menos length células do tabuleiro vazias. """
         count = -1
         queue = [origin]
         visited = set()
@@ -214,8 +198,8 @@ class Board:
                 visited.add(u)
             if count == length:
                 return True
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1]) \
-                         if (self.get_number(adj[0], adj[1]) == 0) \
+            neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
+                         if (self.get_number(adj[0], adj[1]) == 0)
                          and adj not in visited]
             if len(neighbors) > 0:
                 queue.append(neighbors[0])
@@ -224,77 +208,80 @@ class Board:
         return False
 
     def check_free_spaces(self, start):
+        """ Devolve True se a partir de uma simulação de atribuição de valor no tabuleiro não criamos dead spaces. """
+        visited = set()  # Set containing all visited nodes
+        processed = set()  # Set containing all processed nodes
 
-        list_free_spaces = self.free_spaces
-        visited = set()
-        lower_value = self.global_min[1]
-        upper_value = self.global_max[1]
-        lower = self.global_min[0]
-        uppper = self.global_max[0]
-        processed = set()
-
-        for space in list_free_spaces:
+        # For each space in the board's free spaces
+        for space in self.free_spaces:
+            # After we visit and process each node, add it to the processed set
             processed.update(processed.union(visited))
+            # If it's been processed there's nothing left to do with this node
             if space in processed:
                 continue
+            # Reset visited nodes set
             visited = set()
-            no_visited = 0
-            bigger_count = 0
-            bigger_list = []
+            no_visited = 0  # Number of visited nodes
+            bigger_count = 0  # Count of nodes with bigger values seen
+            bigger_list = []  # List of nodes with bigger values seen
             stack = [space]
-            seen_upper = False
-            seen_lower = False
+            seen_upper = False  # True if we've seen the global maximum
+            seen_lower = False  # True if we've seen the global minimum
             while stack:
-                # print(stack)
                 u = stack[-1]
-                # print_debug(f"Currently in {u}")
-                if u in processed:
+                if u in processed:  # Optimization
                     bigger_count = 2
                     break
+                # If we haven't visited u
                 if u not in visited:
+                    # Add it to the visited set
                     visited.add(u)
+                    # Increase number of visited nodes
                     no_visited += 1
+                    # And get its adjacents
                     for n in [adj for adj in self.get_adjacents(u[0], u[1])]:
+                        # For each adjacent we get its value
                         value_n = self.get_number(n[0], n[1])
-                        if n not in visited and value_n == 0:
+                        # If it's a free space and it hasn't been visited yet add it to the stack
+                        if value_n == 0 and n not in visited:
                             stack.append(n)
-                        if value_n >= start and not n in bigger_list and not \
-                                (len(bigger_list) == 1 and abs(
+                        # If it's bigger than the value we started we want to make sure that we can connect
+                        # 2 nodes (there must be a gap in between them)
+                        if value_n >= start and not (len(bigger_list) == 1 and abs(
                                     self.get_number(n[0], n[1]) - self.get_number(bigger_list[0][0],
                                                                                   bigger_list[0][1])) == 1):
                             bigger_list.append(n)
                             bigger_count += 1
-                            # print_debug(f"Found {value_n} in {n}")
-                            # print_debug(f"Got {bigger_count}")
+                        # If we've seen 2 bigger valid nodes than we don't need to check more adjacents
                         if bigger_count == 2:
-                            # print_debug("lezz go")
                             break
-                        if lower_value == value_n:
+                        # And if we've seen the global min or max, set the respective flag
+                        if get_minmax_value(self.global_min) == value_n:
                             seen_lower = True
-                        if upper_value == value_n:
+                        if get_minmax_value(self.global_max) == value_n:
                             seen_upper = True
+                    # If we've seen 2 bigger valid nodes break the DFS
                     if bigger_count == 2:
-                        # print_debug("Got out!")
                         break
                 else:
                     stack = stack[:-1]
 
-            if not (bigger_count == 2 or (seen_lower and no_visited == lower_value - 1) or
-                    (seen_upper and no_visited == self.board_size ** 2 - upper_value) or
+            # 1st condition: we can connect 2 bigger value nodes
+            # 2nd condition: we've seen global_min, and we can connect it with self.global_min (value) - 1 nodes
+            # 3rd condition: we've seen global_max, and we can connect it with N^2 - self.global_max nodes
+            # 4th condition: we've seen both global_min and global_max, and we can connect them
+            if not (bigger_count == 2 or (seen_lower and no_visited == self.global_min[1] - 1) or
+                    (seen_upper and no_visited == self.board_size ** 2 - self.global_max[1]) or
                     (seen_upper and seen_lower and (
-                            no_visited == lower_value - 1 + self.board_size ** 2 - upper_value))):
-                # print_debug("Formaram-se ilhas!")
+                            no_visited == self.global_min[1] - 1 + self.board_size ** 2 - self.global_max[1]))):
                 return False
 
         return True
 
-    def manhattan_distance(self, pos1, pos2):
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
     def __copy__(self):
+        """ Devolve uma cópia vazia da classe Board. """
         class Empty(self.__class__):
             def __init__(self): pass
-
         new_copy = Empty()
         new_copy.__class__ = self.__class__
         return new_copy
@@ -306,111 +293,77 @@ class Numbrix(Problem):
         self.initial = NumbrixState(board)
 
     def actions(self, state: NumbrixState):
-        """ Retorna uma lista de ações que podem ser executadas a
-        partir do estado passado como argumento. """
-
-        global i
-        # global initial_board
-        # if tracemalloc.get_traced_memory()[1] // 1024 > 32768:
-        # # print_debug("Checking our own generated puzzles that exceed memory...")
-        # # print_debug(f'\n{initial_board.to_string()}')
-        # raise AttributeError(f'\n{initial_board.to_string()}')
-        # # # print_debug(f"Está a haver merda? {sum([len(island) for island in state.board.islands]) == state.board.board_size ** 2 - len(state.board.numbers_to_go)}")
+        """ Retorna uma lista de ações que podem ser executadas a partir do estado passado como argumento. """
         actions = []
-        # islands_len = len(state.board.islands)
-        # # print_debug("\n\n")
-        # # print_debug(f"Initial board {i}")
-        i += 1
-        # # print_debug(state.board.islands)
-        # # print_debug(state.board.to_string())
+        board = state.board
 
-        # print_debug('Going on actions with:')
-        # print_debug(f'Global Min: {state.board.global_min} ; Global Max: {state.board.global_max}')
-        # print_debug(f'Local Min: {state.board.local_min} ; Local Max: {state.board.local_max}')
-
-        upper_bound = state.board.global_max[1]
-        upper_bound_pos = state.board.global_max[0]
-
-        lower_bound = state.board.global_min[1]
-        lower_bound_pos = state.board.global_min[0]
+        global_min_pos = get_minmax_pos(board.global_min)
+        global_min_val = get_minmax_value(board.global_min)
+        global_max_pos = get_minmax_pos(board.global_max)
+        global_max_val = get_minmax_value(board.global_max)
 
         # Check if we can continue the board from the lowest and highest occupied position
-        if not (state.board.is_space_reachable(lower_bound_pos, lower_bound - 1)
-                and state.board.is_space_reachable(upper_bound_pos, state.board.board_size ** 2 - upper_bound)):
-            # print_debug("Bounds not continuable")
+        if not (board.is_space_reachable(global_min_pos, global_min_val - 1)
+                and board.is_space_reachable(global_max_pos, board.board_size ** 2 - global_max_val)):
             return []
 
-        if not state.board.extremes:
+        # There's more than an island
+        if not board.extremes:
 
-            maximum = state.board.local_max[1]
-            maximum_pos = state.board.local_max[0]
+            local_max_pos = get_minmax_pos(board.local_max)
+            local_max_val = get_minmax_value(board.local_max)
+            local_min_pos = get_minmax_pos(board.local_min)
+            local_min_val = get_minmax_value(board.local_min)
 
-            minimum = state.board.local_min[1]
-            minimum_pos = state.board.local_min[0]
-            # # print_debug(f"Maximum:{maximum} Minimum:{minimum}")
-
-            # Check if the real distance between numbers is smaller than their manhattan distance
-            if abs(maximum_pos[0] - minimum_pos[0]) + abs(maximum_pos[1] - minimum_pos[1]) > minimum - maximum:
-                # print_debug("O que estas a fazer??")
-                # print("Actions")
-                # print(f"{[]}")
+            # If the value distance between the 2 smallest islands is < than manhattan, no solution
+            if manhattan_distance(local_max_pos, local_min_pos) > local_min_val - local_max_val:
                 return []
 
-            # Check if the minimum and maximum are mutually reachable
-            if not state.board.dfs(maximum_pos, minimum_pos):
-                # print_debug("Not reachable")
-                # print("Actions")
-                # print(f"{[]}")
+            # If the 2 smallest islands aren't reacheable, no solution
+            if not board.dfs(local_max_pos, local_min_pos):
                 return []
 
-            if maximum + 1 in state.board.numbers_to_go:
-                for pos in [adj for adj in state.board.get_adjacents(maximum_pos[0], maximum_pos[1]) \
-                            if state.board.get_number(adj[0], adj[1]) == 0]:
+            # Our goal is to always connect the 2 smallest islands from the smallest one to the second smallest
+            if local_max_val + 1 in board.numbers_to_go:
+                # For each free adjacent to the max
+                for pos in [adj for adj in board.get_adjacents(local_max_pos[0], local_max_pos[1]) \
+                            if board.get_number(adj[0], adj[1]) == 0]:
+                    # We simulate its assignment
+                    board.set_number(pos[0], pos[1], local_max_val + 1)
+                    board.free_spaces.remove((pos[0], pos[1]))
 
-                    # Simulate attribution of position
-                    # print_debug("Simulating")
-                    state.board.set_number(pos[0], pos[1], maximum + 1)
-                    state.board.free_spaces.remove((pos[0], pos[1]))
-                    # print_debug(state.board.to_string())
-
-                    if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) > minimum - (maximum + 1):
-                        # print_debug("2 O que estas a fazer??")
-                        state.board.free_spaces.append((pos[0], pos[1]))
-                        state.board.set_number(pos[0], pos[1], 0)
+                    # If the value difference is smaller than their manhattan distance, no solution
+                    if manhattan_distance(pos, local_min_pos) > local_min_val - (local_max_val + 1):
+                        board.free_spaces.append((pos[0], pos[1]))
+                        board.set_number(pos[0], pos[1], 0)
                         continue
 
-                    if not state.board.dfs(pos, minimum_pos):
-                        # print_debug("2 Not reachable")
-                        state.board.free_spaces.append((pos[0], pos[1]))
-                        state.board.set_number(pos[0], pos[1], 0)
+                    # If they're not reacheable, no solution
+                    if not board.dfs(pos, local_min_pos):
+                        board.free_spaces.append((pos[0], pos[1]))
+                        board.set_number(pos[0], pos[1], 0)
                         continue
 
-                    if abs(pos[0] - minimum_pos[0]) + abs(pos[1] - minimum_pos[1]) <= minimum - (maximum + 1) and \
-                            state.board.check_free_spaces(maximum + 1):
-                        actions.append((pos[0], pos[1], maximum + 1))
-                    # else:
-                        # print_debug("Nuh-uh")
+                    # If the free spaces are valid with this assignment, then append this assignment
+                    if board.check_free_spaces(local_max_val + 1):
+                        actions.append((pos[0], pos[1], local_max_val + 1))
 
-                    state.board.free_spaces.append((pos[0], pos[1]))
-                    state.board.set_number(pos[0], pos[1], 0)
+                    # Remove the simulated assignment
+                    board.free_spaces.append((pos[0], pos[1]))
+                    board.set_number(pos[0], pos[1], 0)
 
-        if state.board.extremes:
-            # print_debug('Aqui caralho')
-            maximum = state.board.global_max[1]
-            maximum_pos = state.board.global_max[0]
-            if maximum != state.board.board_size ** 2:
-                for pos in [adj for adj in state.board.get_adjacents(maximum_pos[0], maximum_pos[1]) \
-                            if state.board.get_number(adj[0], adj[1]) == 0]:
-                    actions.append((pos[0], pos[1], maximum + 1))
-
-            minimum = state.board.global_min[1]
-            minimum_pos = state.board.global_min[0]
-            if minimum != 1:
-                for pos in [adj for adj in state.board.get_adjacents(minimum_pos[0], minimum_pos[1]) \
-                            if state.board.get_number(adj[0], adj[1]) == 0]:
-                    actions.append((pos[0], pos[1], minimum - 1))
-        # print_debug("Actions")
-        # print_debug(f"{actions}")
+        # We've reached a point where there's only 1 island S
+        if board.extremes:
+            # And we want to possibly complete {1, ..., min(S)}
+            if global_max_val != board.board_size ** 2:
+                for pos in [adj for adj in board.get_adjacents(global_max_pos[0], global_max_pos[1])
+                            if board.get_number(adj[0], adj[1]) == 0]:
+                    actions.append((pos[0], pos[1], global_max_val + 1))
+            # And to also complete {max(S), ..., N^2}
+            if global_min_val != 1:
+                for pos in [adj for adj in board.get_adjacents(global_min_pos[0], global_min_pos[1])
+                            if board.get_number(adj[0], adj[1]) == 0]:
+                    actions.append((pos[0], pos[1], global_min_val - 1))
         return actions
 
     def result(self, state: NumbrixState, action):
@@ -419,41 +372,40 @@ class Numbrix(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state). """
 
+        board = state.board
+
+        # Unpack the action
         (row, col, value) = action
-        # print(f"Before applying {action}")
-        # print(state.board.islands)
-        # print(state.board.island_map)
-        # print(state.board.to_string())
-
-        new_board = copy.copy(state.board)
-        new_board.board_size = state.board.board_size
-        new_board.board = copy.copy(state.board.board)
+        # Copy the board and it's attributes accordingly
+        new_board = copy.copy(board)
+        new_board.board_size = board.board_size
+        new_board.board = copy.copy(board.board)
         new_board.set_number(row, col, value)
-        new_board.numbers_to_go = [x for x in state.board.numbers_to_go if x != value]
-        new_board.free_spaces = [x for x in state.board.free_spaces if x != (row, col)]
+        new_board.numbers_to_go = [x for x in board.numbers_to_go if x != value]
+        new_board.free_spaces = [x for x in board.free_spaces if x != (row, col)]
 
-        # Update global minimum
-        if value < state.board.global_min[1]:
+        # Update global minimum if necessary
+        if value < get_minmax_value(board.global_min):
             new_board.global_min = ((row, col), value)
         else:
             new_board.global_min = state.board.global_min
 
-        # Update global maximum
-        if value > state.board.global_max[1]:
+        # Update global maximum if necessary
+        if value > get_minmax_value(board.global_max):
             new_board.global_max = ((row, col), value)
         else:
-            new_board.global_max = state.board.global_max
+            new_board.global_max = board.global_max
 
         # Update locals before checking island convergency
         new_board.local_max = ((row, col), value)
-        new_board.local_min = state.board.local_min
-        if value + 1 == state.board.local_min[1]:  # Island converged
+        new_board.local_min = board.local_min
+        if value + 1 == board.local_min[1]:  # Islands converged
             # We get the max value from an island DFS
             new_board.local_max = new_board.island_dfs(((row, col), value))
             # If we've reached the global max then we only have one island
             if new_board.local_max == new_board.global_max:
                 new_board.local_min = new_board.global_min
-            else:
+            else:  # We want to check the min of the second-smallest island
                 new_board.local_min = ((0, 0), state.board.board_size ** 2 + 1)
                 for i in range(state.board.board_size):
                     for j in range(state.board.board_size):
@@ -461,26 +413,10 @@ class Numbrix(Problem):
                         if new_board.local_max[1] < num < new_board.local_min[1]:
                             new_board.local_min = ((i, j), num)
 
+        # There's only one island left
         if new_board.global_min == new_board.local_min or new_board.global_max == new_board.local_max:
             new_board.extremes = True
 
-        # print_debug('-----------------')
-        # print_debug('new_board:')
-        # print_debug(f'- board_size = {new_board.board_size}')
-        # print_debug(f'- board:\n{new_board.to_string()}')
-        # print_debug(f'- numbers_to_go = {new_board.numbers_to_go}')
-        # print_debug(f'- free_spaces = {new_board.free_spaces}')
-        # print_debug(f'- global_min = {new_board.global_min}')
-        # print_debug(f'- global_max = {new_board.global_max}')
-        # print_debug(f'- local_min = {new_board.local_min}')
-        # print_debug(f'- local_max = {new_board.local_max}')
-        # print_debug('-----------------')
-
-        # print(f"Applying {action}")
-        # print(new_board.islands)
-        # print(new_board.island_map)
-        # print(new_board.to_string())
-        # print("\n")
         return NumbrixState(new_board)
 
     def goal_test(self, state: NumbrixState):
@@ -491,27 +427,17 @@ class Numbrix(Problem):
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
-        # return len(node.state.board.islands)
         board = node.state.board
-        total = 0
-        empty_positions = [(i, j) for i in range(board.board_size) for j in range(board.board_size) \
-                           if board.get_number(i, j) == 0]
-        for pos in empty_positions:
-            free_adj = [adj for adj in board.get_adjacents(pos[0], pos[1]) if board.get_number(adj[0], adj[1]) == 0]
-            total += (4 - len(free_adj)) ** 1.4
-        return total
-
-    # TODO: outros metodos da classe
+        h_n = 0
+        # The idea is to minimize "holes"
+        for space in board.free_spaces:  # For each free space check the number of free adjacents
+            free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
+            h_n += (4 - len(free_adj)) ** 1.4  # Exponent determined experimentally
+        return h_n
 
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
-    # tic = time.perf_counter()
-    # tracemalloc.start()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
-    # toc = time.perf_counter()
-    # print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
-    # print(f"Programa executado em {toc - tic:0.4f} segundos.")
-    # print('----------------------------')
     print(goal_node.state.board.to_string(), sep="")
