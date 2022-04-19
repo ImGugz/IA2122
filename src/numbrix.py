@@ -44,7 +44,7 @@ class NumbrixState:
 class Board:
     """ Representação interna de um tabuleiro de Numbrix. """
 
-    board = []  # board[(i, j)] = Value
+    board = []  # board[i][j] = value
     board_size = 0  # board_size = N^2
     numbers_to_go = []  # numbers_to_go = S in [1, 2, ..., N^2] s.t if i in S, the board doesn't contain number i
     local_min = ()  # local_min = ((lm_x, lm_y), lm_val) belonging to the minimum value of the second island (if appl.)
@@ -71,15 +71,16 @@ class Board:
         self.numbers_to_go = list(
             set(i for i in range(1, self.board_size * self.board_size + 1)) - set(initial_numbers))
 
-        # Through a DFS from the global minimum try to expand an island from it and store its max position and value
+        # Start a DFS from the global minimum to try to expand an island from it and store its max position and value
         self.local_max = self.island_dfs(self.global_min)
         # Arbitrary number to be compared to find to minimum of a second island
         self.local_min = ((0, 0), self.board_size ** 2 + 1)
 
+        local_max = get_minmax_value(self.local_max)
         for i in range(self.board_size):
             for j in range(self.board_size):
                 num = self.get_number(i, j)
-                if self.local_max[1] < num < self.local_min[1]:
+                if local_max < num < get_minmax_value(self.local_min):
                     self.local_min = ((i, j), num)
 
     def get_adjacents(self, row, col):
@@ -89,28 +90,30 @@ class Board:
 
     def get_number(self, row: int, col: int) -> int:
         """ Devolve o valor na respetiva posição do tabuleiro. """
-        if 0 <= row <= self.board_size - 1 and 0 <= col <= self.board_size - 1:
+        try:
             return self.board[row][col]
-        else:
+        except IndexError:
             return None
 
-    def set_number(self, row: int, col: int, value):
+    def set_number(self, row: int, col: int, value: int):
         """ Define um dado valor numa dada posição do tabuleiro. """
-        if 0 <= row <= self.board_size - 1 and 0 <= col <= self.board_size - 1:
+        try:
             self.board[row][col] = value
+        except IndexError:
+            pass
 
     def adjacent_vertical_numbers(self, row: int, col: int) -> (int, int):
         """ Devolve os valores imediatamente abaixo e acima, respectivamente. """
         results = []
         for direction in [1, -1]:
-            results.append(self.board[row + direction][col])
+            results.append(self.get_number(row + direction, col))
         return tuple(results)
 
     def adjacent_horizontal_numbers(self, row: int, col: int) -> (int, int):
         """ Devolve os valores imediatamente à esquerda e à direita, respectivamente. """
         results = []
         for direction in [-1, 1]:
-            results.append(self.board[row][col + direction])
+            results.append(self.get_number(row, col + direction))
         return tuple(results)
 
     @staticmethod
@@ -125,7 +128,6 @@ class Board:
                     split = line.split('\t')
                     initial_numbers += [int(val) for val in split if int(val) != 0]
                     file_board.append([int(val) for val in split])
-            # TODO: Verificar construtor do Board
             return Board(file_board, board_size, initial_numbers)
         except IOError:  # Couldn't open input file
             print("Something went wrong while attempting to read file.")
@@ -256,10 +258,11 @@ class Board:
             # 2nd condition: we've seen global_min, and we can connect it with self.global_min (value) - 1 nodes
             # 3rd condition: we've seen global_max, and we can connect it with N^2 - self.global_max nodes
             # 4th condition: we've seen both global_min and global_max, and we can connect them
-            if not (bigger_count == 2 or (seen_lower and no_visited == self.global_min[1] - 1) or
-                    (seen_upper and no_visited == self.board_size ** 2 - self.global_max[1]) or
+            if not (bigger_count == 2 or (seen_lower and no_visited == get_minmax_value(self.global_min) - 1) or
+                    (seen_upper and no_visited == self.board_size ** 2 - get_minmax_value(self.global_max)) or
                     (seen_upper and seen_lower and (
-                            no_visited == self.global_min[1] - 1 + self.board_size ** 2 - self.global_max[1]))):
+                            no_visited == get_minmax_value(self.global_min) - 1
+                            + self.board_size ** 2 - get_minmax_value(self.global_max)))):
                 return False
 
         return True
@@ -299,11 +302,10 @@ class Numbrix(Problem):
 
             # Our goal is to always connect the 2 smallest islands from the smallest one to the second smallest
             if local_max_val + 1 in board.numbers_to_go:
-                # For each free adjacent to the max
+                # For each free adjacent to the max, append the next value to an action
                 for pos in [adj for adj in board.get_adjacents(local_max_pos[0], local_max_pos[1]) \
                             if board.get_number(adj[0], adj[1]) == 0]:
-                        actions.append((pos[0], pos[1], local_max_val + 1))
-
+                    actions.append((pos[0], pos[1], local_max_val + 1))
 
         # We've reached a point where there's only 1 island S
         if board.extremes:
@@ -351,10 +353,10 @@ class Numbrix(Problem):
         else:
             new_board.global_max = board.global_max
 
-        # Update locals before checking island convergency
+        # Update locals before checking island convergence
         new_board.local_max = ((row, col), value)
         new_board.local_min = board.local_min
-        if value + 1 == board.local_min[1]:  # Islands converged
+        if value + 1 == get_minmax_value(new_board.local_min):  # Islands converged
             # We get the max value from an island DFS
             new_board.local_max = new_board.island_dfs(((row, col), value))
             # If we've reached the global max then we only have one island
@@ -362,10 +364,11 @@ class Numbrix(Problem):
                 new_board.local_min = new_board.global_min
             else:  # We want to check the min of the second-smallest island
                 new_board.local_min = ((0, 0), state.board.board_size ** 2 + 1)
+                local_max = get_minmax_value(new_board.local_max)
                 for i in range(state.board.board_size):
                     for j in range(state.board.board_size):
                         num = new_board.get_number(i, j)
-                        if new_board.local_max[1] < num < new_board.local_min[1]:
+                        if local_max < num < get_minmax_value(new_board.local_min):
                             new_board.local_min = ((i, j), num)
 
         # There's only one island left
@@ -390,12 +393,12 @@ class Numbrix(Problem):
         global_max_pos = get_minmax_pos(board.global_max)
         global_max_val = get_minmax_value(board.global_max)
 
-        # Check if we can continue the board from the lowest and highest occupied position
+        # Check if we can continue the board from the lowest and highest occupied position, if not, no solution
         if not (board.is_space_reachable(global_min_pos, global_min_val - 1)
                 and board.is_space_reachable(global_max_pos, board.board_size ** 2 - global_max_val)):
             return np.inf
 
-        # There's more than an island
+        # When there's more than an island
         if not board.extremes:
 
             local_max_pos = get_minmax_pos(board.local_max)
@@ -407,18 +410,18 @@ class Numbrix(Problem):
             if manhattan_distance(local_max_pos, local_min_pos) > local_min_val - local_max_val:
                 return np.inf
 
-            # If the 2 smallest islands aren't recheable, no solution
+            # If the 2 smallest islands aren't reachable, no solution
             if not board.dfs(local_max_pos, local_min_pos):
                 return np.inf
 
-            # If the free spaces are valid with this assignment, then append this assignment
+            # If the free spaces aren't valid with this assignment, no solution
             if not board.check_free_spaces(local_max_val):
                 return np.inf
 
         # The idea is to minimize "holes"
-        for space in board.free_spaces:  # For each free space check the number of free adjacents
+        for space in board.free_spaces:  # For each free space check its number of free adjacent spaces
             free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
-            h_n += (4 - len(free_adj)) ** 1.4 # Exponent determined experimentally
+            h_n += (4 - len(free_adj)) ** 1.4  # Exponent determined experimentally
         return h_n
 
 
