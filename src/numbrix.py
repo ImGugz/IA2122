@@ -9,7 +9,6 @@
 import sys
 import copy
 import numpy as np
-import tracemalloc, time
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, \
     recursive_best_first_search
 
@@ -135,27 +134,22 @@ class Board:
     def island_dfs(self, origin):
         """ Faz uma procura em profundidade primeiro a partir dum valor, e devolve um tuplo com uma posição e valor
         t.q o valor dessa mesma posição é o maior dessa ilha. """
-        pos = get_minmax_pos(origin)
-        val = get_minmax_value(origin)
-        max_local = (pos, val)
-        queue = [pos]
-        visited = set()
-        while len(queue) > 0:
-            u = queue[-1]
-            visited.add(u)
-            num = self.get_number(u[0], u[1])
-            if num > max_local[1] and num != val:
-                max_local = (u, num)
+        current = get_minmax_pos(origin)
+        current_val = self.get_number(current[0], current[1])
+
+        while True:
+
             # Get all assigned and unvisited neighbors s.t they're value neighbors (abs(diff(values)) = 1
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
-                         if self.get_number(adj[0], adj[1]) != 0
-                         and abs(self.get_number(adj[0], adj[1]) - num) == 1
-                         and adj not in visited]
-            if len(neighbors) > 0:
-                queue.append(neighbors[0])
-            else:
-                queue = queue[:-1]
-        return max_local
+            neighbors = [adj for adj in self.get_adjacents(current[0], current[1])
+                         if self.get_number(adj[0], adj[1]) - current_val == 1]
+
+            if not neighbors:
+                break
+
+            current = neighbors[0]
+            current_val = self.get_number(current[0], current[1])
+
+        return current, current_val
 
     def to_string(self):
         """ Representa um tabuleiro de acordo com o modelo definido no enunciado. """
@@ -168,16 +162,15 @@ class Board:
         visited = set()
         while len(queue) > 0:
             u = queue[-1]
-            visited.add(u)
-            if u == dest:
-                return True
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
-                         if (self.get_number(adj[0], adj[1]) == 0 or adj == dest)
-                         and adj not in visited]
-            if len(neighbors) > 0:
-                queue.append(neighbors[0])
-            else:
-                queue = queue[:-1]
+            queue = queue[:-1]
+            if u not in visited:
+                visited.add(u)
+                if u == dest:
+                    return True
+                neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
+                             if (self.get_number(adj[0], adj[1]) == 0 or adj == dest)
+                             and adj not in visited]
+                queue.extend(neighbors)
         return False
 
     def is_space_reachable(self, origin, length):
@@ -187,18 +180,16 @@ class Board:
         visited = set()
         while len(queue) > 0:
             u = queue[-1]
+            queue = queue[:-1]
             if u not in visited:
                 count += 1
                 visited.add(u)
-            if count == length:
-                return True
-            neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
-                         if (self.get_number(adj[0], adj[1]) == 0)
-                         and adj not in visited]
-            if len(neighbors) > 0:
-                queue.append(neighbors[0])
-            else:
-                queue = queue[:-1]
+                if count == length:
+                    return True
+                neighbors = [adj for adj in self.get_adjacents(u[0], u[1])
+                             if (self.get_number(adj[0], adj[1]) == 0)
+                             and adj not in visited]
+                queue.extend(neighbors)
         return False
 
     def check_free_spaces(self, start):
@@ -433,11 +424,7 @@ class Numbrix(Problem):
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
-    tracemalloc.start()
-    tic = time.perf_counter()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
-    toc = time.perf_counter()
-    #print(goal_node.state.board.to_string(), sep="")
-    print(f"Programa executado em {toc - tic:0.4f} segundos.")
-    print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
+    print(goal_node.state.board.to_string(), sep="")
+
