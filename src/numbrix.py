@@ -8,6 +8,8 @@
 
 import sys
 import copy
+import numpy as np
+import tracemalloc
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, \
     recursive_best_first_search
 
@@ -208,7 +210,8 @@ class Board:
         return False
 
     def check_free_spaces(self, start):
-        """ Devolve True se a partir de uma simulação de atribuição de valor no tabuleiro não criamos dead spaces. """
+        """ Devolve True se um tabuleiro contém dead spaces (podendo no entanto conter dead spaces
+            se retornar False). """
         visited = set()  # Set containing all visited nodes
         processed = set()  # Set containing all processed nodes
 
@@ -302,55 +305,19 @@ class Numbrix(Problem):
         global_max_pos = get_minmax_pos(board.global_max)
         global_max_val = get_minmax_value(board.global_max)
 
-        # Check if we can continue the board from the lowest and highest occupied position
-        if not (board.is_space_reachable(global_min_pos, global_min_val - 1)
-                and board.is_space_reachable(global_max_pos, board.board_size ** 2 - global_max_val)):
-            return []
-
         # There's more than an island
         if not board.extremes:
 
             local_max_pos = get_minmax_pos(board.local_max)
             local_max_val = get_minmax_value(board.local_max)
-            local_min_pos = get_minmax_pos(board.local_min)
-            local_min_val = get_minmax_value(board.local_min)
-
-            # If the value distance between the 2 smallest islands is < than manhattan, no solution
-            if manhattan_distance(local_max_pos, local_min_pos) > local_min_val - local_max_val:
-                return []
-
-            # If the 2 smallest islands aren't reacheable, no solution
-            if not board.dfs(local_max_pos, local_min_pos):
-                return []
 
             # Our goal is to always connect the 2 smallest islands from the smallest one to the second smallest
             if local_max_val + 1 in board.numbers_to_go:
                 # For each free adjacent to the max
                 for pos in [adj for adj in board.get_adjacents(local_max_pos[0], local_max_pos[1]) \
                             if board.get_number(adj[0], adj[1]) == 0]:
-                    # We simulate its assignment
-                    board.set_number(pos[0], pos[1], local_max_val + 1)
-                    board.free_spaces.remove((pos[0], pos[1]))
-
-                    # If the value difference is smaller than their manhattan distance, no solution
-                    if manhattan_distance(pos, local_min_pos) > local_min_val - (local_max_val + 1):
-                        board.free_spaces.append((pos[0], pos[1]))
-                        board.set_number(pos[0], pos[1], 0)
-                        continue
-
-                    # If they're not reacheable, no solution
-                    if not board.dfs(pos, local_min_pos):
-                        board.free_spaces.append((pos[0], pos[1]))
-                        board.set_number(pos[0], pos[1], 0)
-                        continue
-
-                    # If the free spaces are valid with this assignment, then append this assignment
-                    if board.check_free_spaces(local_max_val + 1):
                         actions.append((pos[0], pos[1], local_max_val + 1))
 
-                    # Remove the simulated assignment
-                    board.free_spaces.append((pos[0], pos[1]))
-                    board.set_number(pos[0], pos[1], 0)
 
         # We've reached a point where there's only 1 island S
         if board.extremes:
@@ -429,6 +396,37 @@ class Numbrix(Problem):
         """ Função heuristica utilizada para a procura A*. """
         board = node.state.board
         h_n = 0
+
+        global_min_pos = get_minmax_pos(board.global_min)
+        global_min_val = get_minmax_value(board.global_min)
+        global_max_pos = get_minmax_pos(board.global_max)
+        global_max_val = get_minmax_value(board.global_max)
+
+        # Check if we can continue the board from the lowest and highest occupied position
+        if not (board.is_space_reachable(global_min_pos, global_min_val - 1)
+                and board.is_space_reachable(global_max_pos, board.board_size ** 2 - global_max_val)):
+            return np.inf
+
+        # There's more than an island
+        if not board.extremes:
+
+            local_max_pos = get_minmax_pos(board.local_max)
+            local_max_val = get_minmax_value(board.local_max)
+            local_min_pos = get_minmax_pos(board.local_min)
+            local_min_val = get_minmax_value(board.local_min)
+
+            # If the value distance between the 2 smallest islands is < than manhattan, no solution
+            if manhattan_distance(local_max_pos, local_min_pos) > local_min_val - local_max_val:
+                return np.inf
+
+            # If the 2 smallest islands aren't recheable, no solution
+            if not board.dfs(local_max_pos, local_min_pos):
+                return np.inf
+
+            # If the free spaces are valid with this assignment, then append this assignment
+            if not board.check_free_spaces(local_max_val):
+                return np.inf
+
         # The idea is to minimize "holes"
         for space in board.free_spaces:  # For each free space check the number of free adjacents
             free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
@@ -438,6 +436,8 @@ class Numbrix(Problem):
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
+    tracemalloc.start()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
-    print(goal_node.state.board.to_string(), sep="")
+    #print(goal_node.state.board.to_string(), sep="")
+    print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
