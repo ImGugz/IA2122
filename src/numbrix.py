@@ -9,7 +9,7 @@
 import sys
 import copy
 import numpy as np
-import tracemalloc
+import tracemalloc, time
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, \
     recursive_best_first_search
 
@@ -45,7 +45,7 @@ class NumbrixState:
 class Board:
     """ Representação interna de um tabuleiro de Numbrix. """
 
-    board = {}  # board[(i, j)] = Value
+    board = None  # board[(i, j)] = Value
     board_size = 0  # board_size = N^2
     numbers_to_go = []  # numbers_to_go = S in [1, 2, ..., N^2] s.t if i in S, the board doesn't contain number i
     local_min = ()  # local_min = ((lm_x, lm_y), lm_val) belonging to the minimum value of the second island (if appl.)
@@ -57,16 +57,16 @@ class Board:
 
     def __init__(self, board, board_size, initial_numbers):
         self.board_size = board_size
+        self.board = np.array(board)
         min_initial = min(initial_numbers)
         max_initial = max(initial_numbers)
         for i in range(self.board_size):
             for j in range(self.board_size):
-                self.board[(i, j)] = board[i][j]
                 if board[i][j] == min_initial:
                     self.global_min = ((i, j), min_initial)
                 if board[i][j] == max_initial:
                     self.global_max = ((i, j), max_initial)
-                if self.board[(i, j)] == 0:
+                if self.board[i][j] == 0:
                     self.free_spaces.append((i, j))
 
         self.numbers_to_go = list(
@@ -90,36 +90,28 @@ class Board:
 
     def get_number(self, row: int, col: int) -> int:
         """ Devolve o valor na respetiva posição do tabuleiro. """
-        try:
-            return self.board[row, col]
-        except KeyError:
+        if 0 <= row <= self.board_size - 1 and 0 <= col <= self.board_size - 1:
+            return self.board[row][col]
+        else:
             return None
 
     def set_number(self, row: int, col: int, value):
         """ Define um dado valor numa dada posição do tabuleiro. """
-        try:
-            self.board[row, col] = value
-        except KeyError:
-            pass
+        if 0 <= row <= self.board_size - 1 and 0 <= col <= self.board_size - 1:
+            self.board[row][col] = value
 
     def adjacent_vertical_numbers(self, row: int, col: int) -> (int, int):
         """ Devolve os valores imediatamente abaixo e acima, respectivamente. """
         results = []
         for direction in [1, -1]:
-            try:
-                results.append(self.board[row + direction][col])
-            except IndexError:
-                results.append(None)
+            results.append(self.board[row + direction][col])
         return tuple(results)
 
     def adjacent_horizontal_numbers(self, row: int, col: int) -> (int, int):
         """ Devolve os valores imediatamente à esquerda e à direita, respectivamente. """
         results = []
         for direction in [-1, 1]:
-            try:
-                results.append(self.board[row][col + direction])
-            except IndexError:
-                results.append(None)
+            results.append(self.board[row][col + direction])
         return tuple(results)
 
     @staticmethod
@@ -346,7 +338,7 @@ class Numbrix(Problem):
         # Copy the board and it's attributes accordingly
         new_board = copy.copy(board)
         new_board.board_size = board.board_size
-        new_board.board = copy.copy(board.board)
+        new_board.board = np.copy(board.board)
         new_board.set_number(row, col, value)
         new_board.numbers_to_go = [x for x in board.numbers_to_go if x != value]
         new_board.free_spaces = [x for x in board.free_spaces if x != (row, col)]
@@ -430,14 +422,17 @@ class Numbrix(Problem):
         # The idea is to minimize "holes"
         for space in board.free_spaces:  # For each free space check the number of free adjacents
             free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
-            h_n += (4 - len(free_adj)) ** 1.4  # Exponent determined experimentally
+            h_n += (4 - len(free_adj)) ** 1.1  # Exponent determined experimentally
         return h_n
 
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
     tracemalloc.start()
+    tic = time.perf_counter()
     problem = Numbrix(board)
     goal_node = greedy_search(problem)
+    toc = time.perf_counter()
     #print(goal_node.state.board.to_string(), sep="")
+    print(f"Programa executado em {toc - tic:0.4f} segundos.")
     print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
