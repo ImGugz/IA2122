@@ -45,7 +45,7 @@ class NumbrixState:
 class Board:
     """ Representação interna de um tabuleiro de Numbrix. """
 
-    board = None  # board[(i, j)] = Value
+    board = []  # board[(i, j)] = Value
     board_size = 0  # board_size = N^2
     numbers_to_go = []  # numbers_to_go = S in [1, 2, ..., N^2] s.t if i in S, the board doesn't contain number i
     local_min = ()  # local_min = ((lm_x, lm_y), lm_val) belonging to the minimum value of the second island (if appl.)
@@ -273,6 +273,9 @@ class Board:
 
         return True
 
+    def manhattan_distance(self, pos1, pos2):
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
     def __copy__(self):
         """ Devolve uma cópia vazia da classe Board. """
         class Empty(self.__class__):
@@ -338,7 +341,9 @@ class Numbrix(Problem):
         # Copy the board and it's attributes accordingly
         new_board = copy.copy(board)
         new_board.board_size = board.board_size
-        new_board.board = np.copy(board.board)
+        new_board.board = [board.board[i] if i != row else copy.copy(board.board[i])
+                           for i in range(new_board.board_size)]
+
         new_board.set_number(row, col, value)
         new_board.numbers_to_go = [x for x in board.numbers_to_go if x != value]
         new_board.free_spaces = [x for x in board.free_spaces if x != (row, col)]
@@ -422,7 +427,7 @@ class Numbrix(Problem):
         # The idea is to minimize "holes"
         for space in board.free_spaces:  # For each free space check the number of free adjacents
             free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
-            h_n += (4 - len(free_adj)) ** 1.1  # Exponent determined experimentally
+            h_n += (4 - len(free_adj)) ** 1.4 # Exponent determined experimentally
         return h_n
 
 
