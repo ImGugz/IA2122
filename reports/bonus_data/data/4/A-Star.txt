@@ -1,0 +1,35 @@
+input1
+Programa executado em 0.0028 segundos
+Memória usada: 70 kB
+Número de nós gerados: 18
+Número de nós expandidos: 14
+------------
+input2
+Programa executado em 0.0046 segundos
+Memória usada: 95 kB
+Número de nós gerados: 26
+Número de nós expandidos: 18
+------------
+input3
+Programa executado em 0.0051 segundos
+Memória usada: 136 kB
+Número de nós gerados: 38
+Número de nós expandidos: 16
+------------
+input4
+Programa executado em 0.0029 segundos
+Memória usada: 72 kB
+Número de nós gerados: 18
+Número de nós expandidos: 12
+------------
+input5
+Programa executado em 0.0036 segundos
+Memória usada: 87 kB
+Número de nós gerados: 23
+Número de nós expandidos: 13
+------------
+input6
+Programa executado em 0.0024 segundos
+Memória usada: 61 kB
+Número de nós gerados: 15
+Número de nós expandidos: 12

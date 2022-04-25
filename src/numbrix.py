@@ -8,9 +8,12 @@
 
 import sys
 import copy
+import tracemalloc
+
 import numpy as np
+import time
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search, \
-    recursive_best_first_search
+    recursive_best_first_search, InstrumentedProblem
 
 
 def get_minmax_pos(minmax):
@@ -421,13 +424,21 @@ class Numbrix(Problem):
         # The idea is to minimize "holes"
         for space in board.free_spaces:  # For each free space check its number of free adjacent spaces
             free_adj = [adj for adj in board.get_adjacents(space[0], space[1]) if board.get_number(adj[0], adj[1]) == 0]
-            h_n += (4 - len(free_adj)) ** 1.4  # Exponent determined experimentally
+            h_n += (4 - len(free_adj)) ** 2.0  # Exponent determined experimentally
         return h_n
 
 
 if __name__ == "__main__":
     board = Board.parse_instance(sys.argv[1])
+    tracemalloc.start()
+    tic = time.perf_counter()
     problem = Numbrix(board)
-    goal_node = greedy_search(problem)
-    print(goal_node.state.board.to_string(), sep="")
+    instrumented = InstrumentedProblem(problem)
+    goal_node = greedy_search(instrumented)
+    toc = time.perf_counter()
+    print(f'Programa executado em {toc - tic:0.4f} segundos')
+    print(f'Memória usada: {tracemalloc.get_traced_memory()[1] // 1024} kB')
+    print(f'Número de nós gerados: {instrumented.states}')
+    print(f'Número de nós expandidos: {instrumented.succs}')
+    # print(goal_node.state.board.to_string(), sep="")
 
