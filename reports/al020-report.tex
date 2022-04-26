@@ -15,11 +15,13 @@
 \usepackage{adjustbox}
 \usepackage{hyperref}
 \usepackage{interval}
+\usepackage{microtype}
 
-\pagestyle{fancy}
 \graphicspath{ {./output} }
 \setlength{\droptitle}{-5em}
+\renewcommand\_{\textunderscore\linebreak[1]}
 \cfoot{\normalsize\thepage}
+
 \title{Relatório Numbrix - Grupo al020}
 \author{Inteligência Aritficial P3 2021/2022}
 \date{}
@@ -31,15 +33,14 @@
     \end{tikzpicture}
     \vspace{-3.5em}
     \section{Descrição do Problema e da Solução}
-        \indent No âmbito da UC de Inteligência Artificial, foi-nos proposto uma resolução ao problema \textit{Numbrix}.
+        \indent No âmbito da UC de Inteligência Artificial, foi-nos proposto solucionar o problema \textit{Numbrix}.
         Neste existe uma grelha \textbf{$N\times N$}, onde cada célula pode conter um número positivo inteiro.
         O objetivo é preencher a grelha com uma sequência de números adjacentes horizontal ou verticalmente, com base numa instância inicialmente
         dada que já contém posições fixas de números em células.
 
-        \indent Como auxílio de resolução ao problema, foram usados os vários algoritmos de procura informada e não informada disponibilizados no ficheiro \textit{search.py} — mais concretamente, os seguintes: \\
-        \textit{breadth\_first\_tree\_search}, \textit{depth\_first\_tree\_search}, \textit{astar\_search}, \textit{greedy\_search}.
+        \indent Como auxílio de resolução ao problema, foram usados os vários algoritmos de procura informada e não informada disponibilizados no ficheiro \textit{search.py} — mais concretamente, os seguintes: \textit{breadth\_first\_tree\_search}, \textit{depth\_first\_tree\_search}, \textit{astar\_search}, \textit{greedy\_search}.
 
-        \indent A \textbf{solução} utilizada para a resolução do problema foi uma que cria ilhas ordenadas de números no tabuleiro (sejam essas ilhas \textbf{I}). O algoritmo implementado tenta sucessivamente ligar o maior número da menor ilha ($I_{0}$) ao menor número da segunda menor ($I_{1}$), até que convirja em 1 só. Define-se uma ilha de números, $I_{j}$, como uma sequência de números adjacentes que são células vizinhas no tabuleiro, como abaixo exemplificado.
+        \indent A \textbf{solução} utilizada para a resolução do problema foi uma que cria ilhas ordenadas de números no tabuleiro (seja o conjunto dessas ilhas \textbf{I}). O algoritmo implementado tenta sucessivamente ligar o maior número da menor ilha ($I_{0}$) ao menor número da segunda menor ($I_{1}$), até que convirja em 1 só. Define-se uma ilha de números, $I_{j}$, como uma sequência de números adjacentes que são células vizinhas no tabuleiro, como abaixo exemplificado.
         \vspace{-2.5mm}
         \begin{table}[ht!]\centering\footnotesize
             \begin{subtable}{0.2\textwidth}
@@ -78,20 +79,20 @@
         \vspace{-6.5mm}
         \begin{itemize}[label=\ding{212}]
           \setlength\itemsep{-0.2em}
-            \item Se $\#\textbf{I} > 1$, para cada célula adjacente livre\footnote{Uma célula diz-se livre se não está preenchida por nenhum número no tabuleiro.} de $x$ meter $z = x + 1$.
+            \item Se $\#\textbf{I} > 1$, para cada célula adjacente livre\footnote{Uma célula diz-se livre se não está preenchida por nenhum número no tabuleiro.} de $x$ meter $z = y + 1$.
             \item Se $\#\textbf{I} = 1$, no caso de $x \neq 1$ meter $z_{1} = x - 1$ para cada célula adjacente livre da posição de $x$ e, analogamente, no caso de $y \neq N^2$ meter $z_{2} = y + 1$ para cada célula adjacente livre da posição de $y$.
         \end{itemize}
         \vspace{-3mm}
 
         \indent O \textbf{resultado} das ações consiste em copiar as estruturas do tabuleiro e auxiliares, definir a nova posição dada pelas ações e realizar a possível convergência de ilhas.
 
-        \indent A \textbf{heurística} implementada tem em conta os seguintes aspetos (seja ainda $x = min(I_{0})$, $y = max(I_{0})$ e $g_{min} = min(I_{0})$ e $g_{max} = max(I_{N})$, assumindo que \textbf{I} contém $N$ ilhas):
+        \indent A \textbf{heurística} implementada tem em conta os seguintes aspetos (seja ainda $x = max(I_{0})$, $y = min(I_{1})$ e $g_{min} = min(I_{0})$ e $g_{max} = max(I_{N})$, assumindo que \textbf{I} contém $N$ ilhas):
         \vspace{-2mm}
         \begin{itemize}[label=\ding{212}]
           \setlength\itemsep{-0.2em}
             \item Se não existem $g_{min} - 1$ posições livre desde a posição de $g_{min}$ ou $N^2 - g_{max}$ desde a posição de $g_{max}$, devolve $\infty$.
             \item Se $\#\textbf{I} > 1$, se $Manhattan(pos_{x}, pos_{y}) > x - y$, ou se a posição de $y$ não é atingível por $x$, ou se a ação cria \textit{dead spaces}\footnote{Um \textit{dead space} no tabuleiro é um sub-conjunto de posições livres que torna impossível qualquer tipo de preenchimento coerente com as restrições do problema.} no tabuleiro, devolve $\infty$.
-            \item Para cada célula livre no tabuleiro, contar o seu número de células livres adjacentes e elevar esse número a $1.4$. No fim, devolver a soma desta contagem.
+            \item Para cada célula livre no tabuleiro, contar o seu número de células livres adjacentes e elevar esse número a $1.4$. No fim, devolver a soma desta contagem de todas as células livres.
         \end{itemize}
 
 
@@ -131,6 +132,6 @@
         \label{fig:example}%
         \end{figure}
 
-        \indent Verificou-se que para os mesmos testes o algoritmo \textit{Greedy Search} conseguia uma redução significativa de tempo de execução. Para além dessa análise experimental feita, destacou-se o facto de o expoente $1.4$ ser em média o que mais reduzia o tempo de execução. Por fim, considerando todos os fatores supramencionados, decidiu-se deixar a implementação com \textbf{procura informada que usa o algoritmo \textit{Greedy Search} e expoente 1.4 na heurística}.
+        \indent Verificou-se que para os mesmos testes o algoritmo \textit{Greedy Search} conseguia uma redução significativa de tempo de execução. Para além dessa análise experimental feita, destacou-se o facto de o expoente $1.4$ ser em média o que mais reduzia o tempo de execução. Por fim, considerando todos os fatores supramencionados, decidiu-se optar pela implementação com \textbf{procura informada que usa o algoritmo \textit{Greedy Search} e expoente 1.4 na heurística}.
 
 \end{document}
