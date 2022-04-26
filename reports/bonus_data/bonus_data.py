@@ -40,7 +40,7 @@ for board_size in board_sizes:
             for h in heuristics:
                 algo_str = algo.lower().replace('.txt', '')
                 result_csv = CSVS_FOLDER + board_size + '/' + h + '_' + algo_str + '_result.csv'
-                csvs[board_size + '_' + algo_str] = result_csv
+                csvs[board_size + '_' + algo_str + '_' + h] = result_csv
                 rf = open(result_csv, 'w+')
                 rf.write('input,time,memory,generated,expanded\n')
                 with open(DATA_FOLDER + board_size + '/' + h + '/' + algo) as f:
@@ -58,26 +58,30 @@ for board_size in board_sizes:
                 rf.close()
 
 # Create DF
-# algo_df = {}
-# custom_cycler = (cycler(color=['r', 'b', 'g', 'k']) +
-#                  cycler(linestyle=['-', '--', ':', '-.']))
-# labels = {'time': 'Execution Time(s)', 'memory': 'Used Memory (kB)', 'generated': 'Generated Nodes', 'expanded': 'Expanded Nodes'}
-#
-# for algo, csv in csvs.items():
-#     df = pd.read_csv(csv, index_col=False)
-#     algo_df[algo] = df
-#
-# for col in df:
-#     if col == 'input':
-#         continue
-#     fig, ax = plt.subplots()
-#     ax.set_prop_cycle(custom_cycler)
-#     for algo in algo_df.keys():
-#         ax.plot([i for i in range(NUM_TESTS)], algo_df[algo][col], label=algo, alpha=0.5)
-#     ax.set_xticks([i for i in range(NUM_TESTS)])
-#     ax.xaxis.grid(alpha=0.3)
-#     ax.legend(loc='best')
-#     ax.set_xlabel('Input')
-#     ax.set_ylabel(labels[col])
-#     plt.savefig(f'{PLOTS_FOLDER}{col}_plot.pdf')
-#     plt.cla()
+algo_df = {}
+custom_cycler = (cycler(color=['r', 'b', 'g', 'k', 'y', 'm']) +
+                 cycler(linestyle=['-', '--', ':', '-.', '-', '--']))
+labels = {'time': 'Execution Time(s)', 'memory': 'Used Memory (kB)', 'generated': 'Generated Nodes', 'expanded': 'Expanded Nodes'}
+
+for algo, csv in csvs.items():
+    df = pd.read_csv(csv, index_col=False)
+    algo_df[algo] = df
+
+average_dict = {}
+for algo in algorithms:
+    if algo == 'BFS.txt' or algo == 'DFS.txt':
+        continue
+    fig, ax = plt.subplots()
+    ax.set_prop_cycle(custom_cycler)
+    algo_str = algo.lower().replace('.txt', '')
+    for h in heuristics:
+        aux = '10_' + algo_str + '_' + h
+        time = algo_df[aux]['time']
+        ax.plot([i for i in range(NUM_TESTS)], time, label=h, alpha=0.5)
+    ax.set_xticks([i for i in range(1, NUM_TESTS + 1)])
+    ax.xaxis.grid(alpha=0.3)
+    ax.legend(loc='best')
+    ax.set_xlabel('Input')
+    ax.set_ylabel(labels['time'])
+    plt.savefig(f'{PLOTS_FOLDER}{algo_str}_h_plot.pdf')
+    plt.cla()
