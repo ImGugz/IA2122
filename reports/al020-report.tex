@@ -23,7 +23,7 @@
 \cfoot{\normalsize\thepage}
 
 \title{Relatório Numbrix - Grupo al020}
-\author{Inteligência Aritficial P3 2021/2022}
+\author{Inteligência Artificial P3 2021/2022}
 \date{}
 
 \begin{document}
@@ -79,14 +79,14 @@
         \vspace{-6.5mm}
         \begin{itemize}[label=\ding{212}]
           \setlength\itemsep{-0.2em}
-            \item Se $\#\textbf{I} > 1$, para cada célula adjacente livre\footnote{Uma célula diz-se livre se não está preenchida por nenhum número no tabuleiro.} de $x$ meter $z = y + 1$.
+            \item Se $\#\textbf{I} > 1$, para cada célula adjacente livre\footnote{Uma célula diz-se livre se não está preenchida por nenhum número no tabuleiro.} de $y$ meter $z = y + 1$.
             \item Se $\#\textbf{I} = 1$, no caso de $x \neq 1$ meter $z_{1} = x - 1$ para cada célula adjacente livre da posição de $x$ e, analogamente, no caso de $y \neq N^2$ meter $z_{2} = y + 1$ para cada célula adjacente livre da posição de $y$.
         \end{itemize}
         \vspace{-3mm}
 
         \indent O \textbf{resultado} das ações consiste em copiar as estruturas do tabuleiro e auxiliares, definir a nova posição dada pelas ações e realizar a possível convergência de ilhas.
 
-        \indent A \textbf{heurística} implementada tem em conta os seguintes aspetos (seja ainda $x = max(I_{0})$, $y = min(I_{1})$ e $g_{min} = min(I_{0})$ e $g_{max} = max(I_{N})$, assumindo que \textbf{I} contém $N$ ilhas):
+        \indent A \textbf{heurística} implementada tem em conta os seguintes aspetos (seja ainda $x = max(I_{0})$, $y = min(I_{1})$ e $g_{min} = min(I_{0})$ e $g_{max} = max(I_{N})$, assumindo para $y$ que \textbf{I} contém $N > 1$ ilhas):
         \vspace{-2mm}
         \begin{itemize}[label=\ding{212}]
           \setlength\itemsep{-0.2em}
@@ -132,6 +132,6 @@
         \label{fig:example}%
         \end{figure}
 
-        \indent Verificou-se que para os mesmos testes o algoritmo \textit{Greedy Search} conseguia uma redução significativa de tempo de execução. Para além dessa análise experimental feita, destacou-se o facto de o expoente $1.4$ ser em média o que mais reduzia o tempo de execução. Por fim, considerando todos os fatores supramencionados, decidiu-se optar pela implementação com \textbf{procura informada que usa o algoritmo \textit{Greedy Search} e expoente 1.4 na heurística}.
+        \indent Verificou-se que para os mesmos testes o algoritmo \textit{Greedy Search} conseguiu uma redução significativa de tempo de execução. Para além dessa análise experimental feita, destacou-se o facto de o expoente $1.4$ ser em média o que mais reduzia o tempo de execução. Por fim, considerando todos os fatores supramencionados, decidiu-se optar pela implementação com \textbf{procura informada que usa o algoritmo \textit{Greedy Search} e expoente 1.4 na heurística}.
 
 \end{document}
