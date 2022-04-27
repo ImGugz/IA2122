@@ -16,6 +16,7 @@
 \usepackage{hyperref}
 \usepackage{interval}
 \usepackage{microtype}
+\usepackage{amsmath}
 
 \graphicspath{ {./output} }
 \setlength{\droptitle}{-5em}
@@ -33,26 +34,12 @@
     \end{tikzpicture}
     \vspace{-6em}
     \section{Descrição do Problema e da Solução}
-        \indent No âmbito da UC de Inteligência Artificial, foi-nos proposto solucionar o problema \textit{Numbrix}.
-        Neste existe uma grelha \textbf{$N\times N$}, onde cada célula pode conter um número positivo inteiro.
-        O objetivo é preencher a grelha com uma sequência de números adjacentes horizontal ou verticalmente, com base numa instância inicialmente
-        dada que já contém posições fixas de números em células.
+    \indent O presente relatório apresenta uma solução para o problema \textit{Numbrix}.
+    Neste existe uma grelha \textbf{$N\times N$}, onde cada célula pode conter um número positivo inteiro entre $1$ e $N^2$.
+    O objetivo é preencher a grelha com todos os números de $1$ a $N^2$ por forma a que formem uma sequência de números adjacentes horizontal ou verticalmente. \par
 
-        \indent Como auxílio de resolução ao problema, foram usados os vários algoritmos de procura informada e não informada disponibilizados no ficheiro \textit{search.py} — mais concretamente, os seguintes: \textit{breadth\_first\_tree\_search}, \textit{depth\_first\_tree\_search}, \textit{astar\_search}, \textit{greedy\_search}.
-
-        \indent A \textbf{solução} utilizada para a resolução do problema foi uma que cria ilhas ordenadas de números no tabuleiro (seja o conjunto dessas ilhas \textbf{I}). O algoritmo implementado tenta sucessivamente ligar o maior número da menor ilha ($I_{0}$) ao menor número da segunda menor ($I_{1}$), até que convirja em 1 só. Define-se uma ilha de números, $I_{j}$, como uma sequência de números adjacentes que são células vizinhas no tabuleiro, como abaixo exemplificado.
-        \vspace{-2.5mm}
+    \indent A solução formaliza o \textit{Numbrix} como um problema de procura. Cada \textbf{estado} \textit{state} é representado por uma matriz $N \times N$, $state.board$, sendo que \textit{estado inicial} é uma representação matricial do tabuleiro dado inicialmente. Dado um estado, as \textbf{ações} aplicáveis correspondem a colocar um número numa posição livre (i.e., nula) adjacente à posição com maior número na sequência de um ou mais números adjacentes com os menores valores das presentes no tabuleiro. Por exemplo, as ações aplicáveis ao tabuleiro (a) abaixo consiste em preencher $state.board[0][1]$ com 3 (considerando-se que os índices das linhas e colunas começam em 0). Se esse número for $N^2$ (caso (b)) as ações aplicáveis consiste em atribuir o antecessor à posição com o menor número na (única) sequência de números adjacentes (i.e., preencher $state.board[1][2]$ ou $state.board[0][1]$ com 4).
         \begin{table}[ht!]\centering\footnotesize
-            \begin{subtable}{0.2\textwidth}
-                \centering
-                \begin{tabular}{ccc}
-                    2 & 3 & 0 \\
-                    1 & 0 & 0 \\
-                    0 & 0 & 0
-                \end{tabular}
-                \caption{\textbf{I} = $\{\{1, 2, 3\}\}$}
-            \end{subtable}
-            \hfill
             \begin{subtable}{0.2\textwidth}
                 \centering
                 \begin{tabular}{ccc}
@@ -60,41 +47,29 @@
                     1 & 0 & 5 \\
                     0 & 0 & 0
                 \end{tabular}
-                \caption{\textbf{I} = $\{\{1, 2\}, \{4, 5\}\}$}
+                \caption{}
             \end{subtable}
-            \hfill
             \begin{subtable}{0.2\textwidth}
                 \centering
                 \begin{tabular}{ccc}
-                    5 & 4 & 1 \\
-                    0 & 3 & 0 \\
-                    0 & 0 & 0
+                    0 & 0 & 0 \\
+                    6 & 5 & 0 \\
+                    7 & 8 & 9
                 \end{tabular}
-                \caption{\textbf{I} = $\{\{1\}, \{3, 4, 5\}\}$}
+                \caption{}
             \end{subtable}
         \end{table}
 
-        \vspace{-3.5mm}
-        \indent As \textbf{ações} a serem executadas a partir de um dado estado dependem de \#\textbf{I} (seja $x = min(I_{0})$ e $y = max(I_{0})$):\\
-        \vspace{-6.5mm}
-        \begin{itemize}[label=\ding{212}]
-          \setlength\itemsep{-0.2em}
-            \item Se $\#\textbf{I} > 1$, para cada célula adjacente livre\footnote{Uma célula diz-se livre se não está preenchida por nenhum número no tabuleiro.} de $y$ meter $z = y + 1$.
-            \item Se $\#\textbf{I} = 1$, no caso de $x \neq 1$ meter $z_{1} = x - 1$ para cada célula adjacente livre da posição de $x$ e, analogamente, no caso de $y \neq N^2$ meter $z_{2} = y + 1$ para cada célula adjacente livre da posição de $y$.
-        \end{itemize}
-        \vspace{-3mm}
+        \indent O \textbf{resultado} de uma \textbf{ação} $(position = (x, y), value)$ consiste em criar um novo estado $state'$ copiando o estado do nó pai, procedendo-se em seguida à atribuição $state'.board[x][y] = value$.
 
-        \indent O \textbf{resultado} das ações consiste em copiar as estruturas do tabuleiro e auxiliares, definir a nova posição dada pelas ações e realizar a possível convergência de ilhas.
-
-        \indent A \textbf{heurística} implementada tem em conta os seguintes aspetos (seja ainda $x = max(I_{0})$, $y = min(I_{1})$ e $g_{min} = min(I_{0})$ e $g_{max} = max(I_{N})$, assumindo para $y$ que \textbf{I} contém $N > 1$ ilhas):
-        \vspace{-2mm}
-        \begin{itemize}[label=\ding{212}]
-          \setlength\itemsep{-0.2em}
-            \item Se não existem $g_{min} - 1$ posições livre desde a posição de $g_{min}$ ou $N^2 - g_{max}$ desde a posição de $g_{max}$, devolve $\infty$.
-            \item Se $\#\textbf{I} > 1$, se $Manhattan(pos_{x}, pos_{y}) > x - y$, ou se a posição de $y$ não é atingível por $x$, ou se a ação cria \textit{dead spaces}\footnote{Um \textit{dead space} no tabuleiro é um sub-conjunto de posições livres que torna impossível qualquer tipo de preenchimento coerente com as restrições do problema.} no tabuleiro, devolve $\infty$.
-            \item Para cada célula livre no tabuleiro, contar o seu número de células livres adjacentes e elevar esse número a $1.4$. No fim, devolver a soma desta contagem de todas as células livres.
-        \end{itemize}
-
+        \indent Por forma a guiar eficientemente a procura, formulou-se a seguinte \textbf{heurística} parametrizada $h_\alpha$, que vale $\infty$ se (1) não existe uma sequência de posições livres entre a posição com maior número na sequência de um ou mais números contíguos com os menores valores das presentes no tabuleiro e a posição com o menor valor da sequência com menores números entre as restantes; (2) se a distância de \textit{Manhattan} entre estas duas posições é superior ao valor absoluto da diferença entre os seus valores; (3) se há pelos menos $min - 1$ e $N^2 - max$ posições livres atingíveis da posição com menor $min$ e maior valor $max$ presentes no tabuleiro, resp; ou (4) se qualquer conjunto de posições livres adjacentes possui pelo menos duas posições com \textbf{valores maiores} que o maior valor já atribuído mas que \textbf{não são sucessores} (tal é uma condição necessária para que esses espaços sejam posteriormente utilizados no futuro). Caso contrário, sendo $F$ o conjunto de posições vagas no tabuleiro, e $adj(pos)$ o conjunto de posições livres adjacentes à posição $pos$, tem-se:
+        \vspace*{5mm}
+        \[
+            h_\alpha = \sum_{pos \in F} (4 - |adj(pos)|)^\alpha
+            \]
+        \indent O \textbf{teste objetivo} consiste em determinar se só existe uma sequência de números contíguos no tabuleiro, cujo o máximo é $N^2$ e o mínimo é 1 (variáveis que se podem manter em memória). O \textbf{custo de cada ação} é 1.
+    
+    \pagebreak
 
     \section{Implementação e Análise dos Resultados}~
         \indent Dados os testes de \textit{input/output} fornecidos pelo corpo docente, obtiveram-se os seguintes resultados aplicando o algoritmo implementado:\\
@@ -119,18 +94,17 @@
         \bottomrule
         \end{tabular}
         \end{adjustbox} \\
-
-        \indent Primeiramente, o uso da heurística foi um elemento nitidamente diferenciador. Porém, dada a impossibilidade de apurar qual dos algoritmos a usar a heurística (\textit{A-Star Search} ou \textit{Greedy Search}) era o mais eficiente, criou-se uma \href{https://github.com/ImGugz/IA2122/blob/main/src/generator.py}{ferramenta em \textit{Python}} que gerava ficheiros \textit{input/output} que nos permitissem ver a fundo como otimizar a heurística. Para o efeito, geraram-se 6 instâncias de tabuleiros $10 \times 10$ e utilizaram-se ambos os algoritmos com a mesma heurística, com incrementos de $0.2$ no expoente da heurística, $j$, tal que $j \in \interval{1}{2}.$
+        
+        \indent Todos os métodos de procura são \textbf{completos}, dado que, por construção, a solução do problema fica a uma profundidade máxima de $N^2$, nunca se gerando estados repetidos dado que se vão atribuindo números por ordem crescente. Em particular, obtém-se uma complexidade temporal e espacial de $O(4^{N^2})$. A performance superior da DFS deve-se ao facto de todos os nós expandidos por DFS em relação à BFS também serem expandidos por BFS. A utilização de um heurística melhora substancialmente os tempos em relação aos dois algoritmos anteriores (confere caso com $n$ = 7), dado que o seu valor está correlacionado com a usabilidade dos espaços livres restantes (reforçando a condição (4) exposta na heurística). Para determinar o seu valor ótimo de $\alpha$, geraram-se 6 instâncias de tabuleiros $10 \times 10$ e utilizaram-se ambos os algoritmos com a mesma heurística, com incrementos de $0.2$ no expoente da heurística, $\alpha$, tal que $\alpha \in \interval{1}{2}.$
         \vspace{-4.5mm}
         \begin{figure}[ht!]
         \centering
         \subfloat[\centering \textit{A-Star Search}]{{\includegraphics[width=8.5cm]{a-star_h_plot.pdf} }}%
         \qquad
         \subfloat[\centering \textit{Greedy Search}]{{\includegraphics[width=8.5cm]{greedy_h_plot.pdf} }}%
-        \caption{Comparação do expoente da heurística entre \textit{A-Star Search} e \textit{Greedy Search}}%
         \label{fig:example}%
         \end{figure}
 
-        \indent Verificou-se que para os mesmos testes o algoritmo \textit{Greedy Search} conseguiu uma redução significativa de tempo de execução. Para além dessa análise experimental feita, destacou-se o facto de o expoente $1.4$ ser em média o que mais reduzia o tempo de execução. Por fim, considerando todos os fatores supramencionados, decidiu-se optar pela implementação com \textbf{procura informada que usa o algoritmo \textit{Greedy Search} e expoente 1.4 na heurística}.
+        \indent Atendendo aos dados obtidos, decidiu-se optar pela implementação com \textbf{procura informada que usa \textit{Greedy Search} e $\alpha$ = 1.4 }. Dado que $\alpha$ controla o decaimento da função heurística para o nó sucessor (que é maior quanto maior for $\alpha$), e que a introdução de uma parcela linear com a profundidade do nó no algoritmo $A^*$ reduz esse decaimento, postula-se que a escolha obtida proporciona um valor optimal da profundidade de cada backtrack realizado.
 
 \end{document}
